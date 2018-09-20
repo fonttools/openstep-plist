@@ -7,7 +7,9 @@ from aplist._aplist cimport (
     line_number_strings as _line_number_strings,
     is_valid_unquoted_string_char as _is_valid_unquoted_string_char,
     advance_to_non_space as _advance_to_non_space,
-    get_slashed_char as _get_slashed_char
+    get_slashed_char as _get_slashed_char,
+    parse_unquoted_plist_string as _parse_unquoted_plist_string,
+    parse_plist_string as _parse_plist_string,
 )
 from cpython.unicode cimport (
     PyUnicode_FromUnicode, PyUnicode_AS_UNICODE, PyUnicode_GET_SIZE,
@@ -54,3 +56,13 @@ def advance_to_non_space(s, offset=0):
 def get_slashed_char(s, offset=0):
     cdef ParseContext ctx = ParseContext.fromstring(s, offset)
     return _get_slashed_char(&ctx.pi)
+
+
+def parse_unquoted_plist_string(s):
+    cdef ParseContext ctx = ParseContext.fromstring(s)
+    return _parse_unquoted_plist_string(&ctx.pi)
+
+
+def parse_plist_string(s, required=True):
+    cdef ParseContext ctx = ParseContext.fromstring(s)
+    return _parse_plist_string(&ctx.pi, required=required)

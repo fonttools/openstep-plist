@@ -391,7 +391,10 @@ cdef bytes parse_plist_data(ParseInfo *pi):
     cdef array.array data = get_data_bytes(pi)
     if pi.curr[0] == c">":
         pi.curr += 1  # move past '>'
-        return bytes(data)
+        if PY_MAJOR_VERSION >= 3:
+            return data.tobytes()
+        else:
+            return data.tostring()
     else:
         raise ParseError(
             "Expected terminating '>' for data at line %d"

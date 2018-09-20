@@ -1,4 +1,4 @@
-from ._aplist import load, loads
+from ._aplist import load, loads, ParseError
 
 
-__all__ = ["load", "loads"]
+__all__ = ["load", "loads", "ParseError"]
