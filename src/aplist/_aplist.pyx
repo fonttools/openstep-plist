@@ -1,4 +1,5 @@
 #cython: language_level=3
+#distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
 from cpython.unicode cimport (
     PyUnicode_FromUnicode, PyUnicode_AS_UNICODE, PyUnicode_GET_SIZE,
