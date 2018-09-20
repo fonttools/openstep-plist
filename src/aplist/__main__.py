@@ -4,7 +4,7 @@ import aplist
 import json
 import base64
 import binascii
-from collections import OrderedDict
+# from collections import OrderedDict
 
 
 class Base64Encoder(json.JSONEncoder):
@@ -31,7 +31,7 @@ def main(args=None):
         parse = aplist.load
     elif method == "-g":
 
-        def parse(fp, dict_type):
+        def parse(fp, dict_type=dict):
             from glyphsLib.parser import Parser
 
             s = fp.read()
@@ -43,7 +43,8 @@ def main(args=None):
     infile = args[1]
 
     with open(infile, "r", encoding="utf-8") as fp:
-        data = parse(fp, dict_type=OrderedDict)
+        # data = parse(fp, dict_type=OrderedDict)
+        data = parse(fp)
 
     if len(args) > 2:
         outfile = args[2]
