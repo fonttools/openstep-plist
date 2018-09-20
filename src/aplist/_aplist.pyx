@@ -5,6 +5,7 @@ from cpython.unicode cimport (
 )
 from libc.stdint cimport uint8_t, uint32_t
 from cpython cimport array
+from cpython.version cimport PY_MAJOR_VERSION
 import array
 cimport cython
 
@@ -424,11 +425,19 @@ cdef object parse_plist_object(ParseInfo *pi, bint required=True):
             )
 
 
-def loads(string, dict_type=dict):
-    if not isinstance(string, unicode):
-        string = string.decode("utf-8")
+cdef inline unicode _text(s):
+    if type(s) is unicode:
+        return <unicode>s
+    elif PY_MAJOR_VERSION < 3 and isinstance(s, bytes):
+        return (<bytes>s).decode('ascii')
+    elif isinstance(s, unicode):
+        return unicode(s)
+    else:
+        raise TypeError("Could not convert to unicode.")
 
-    cdef unicode s = <unicode>string
+
+def loads(string, dict_type=dict):
+    cdef unicode s = _text(string)
     cdef Py_ssize_t length = PyUnicode_GET_SIZE(s)
     cdef Py_UNICODE* buf = PyUnicode_AS_UNICODE(s)
 

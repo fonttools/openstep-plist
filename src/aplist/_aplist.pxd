@@ -60,3 +60,6 @@ cdef bytes parse_plist_data(ParseInfo *pi)
 
 
 cdef object parse_plist_object(ParseInfo *pi, bint required=*)
+
+
+cdef unicode _text(s)
