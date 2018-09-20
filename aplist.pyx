@@ -9,10 +9,6 @@ import array
 cimport cython
 
 
-cdef class ParseError(Exception):
-    pass
-
-
 cdef uint32_t line_number_strings(ParseInfo *pi):
     # warning: doesn't have a good idea of Unicode line separators
     cdef const Py_UNICODE *p = pi.begin
@@ -394,10 +390,9 @@ cdef array.array parse_plist_data(ParseInfo *pi):
         )
 
 
-cdef object parse_plist_object(ParseInfo *pi, bint required):
+cdef object parse_plist_object(ParseInfo *pi, bint required=True):
     cdef Py_UNICODE ch
-    cdef bint found_char = advance_to_non_space(pi)
-    if not found_char:
+    if not advance_to_non_space(pi):
         if required:
             raise ParseError("Unexpected EOF while parsing plist")
     ch = pi.curr[0]
