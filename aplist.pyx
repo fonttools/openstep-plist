@@ -439,6 +439,7 @@ def loads(string, dict_type=dict):
         dict_type=<void *>dict_type
     )
 
+    cdef const Py_UNICODE *begin = pi.curr
     cdef object result = None
     if not advance_to_non_space(&pi):
         # a file consisting of only whitespace or empty is defined as an
@@ -448,9 +449,15 @@ def loads(string, dict_type=dict):
         result = parse_plist_object(&pi, required=True)
         if result:
             if advance_to_non_space(&pi):
-                raise ParseError(
-                    "Junk after plist at line %d" % line_number_strings(&pi)
-                )
+                if not isinstance(result, unicode):
+                    raise ParseError(
+                        "Junk after plist at line %d" % line_number_strings(&pi)
+                    )
+                else:
+                    # keep parsing for a 'strings resource' file: it looks like
+                    # a dictionary without the opening/closing curly braces
+                    pi.curr = begin
+                    result = parse_plist_dict_content(&pi)
 
     return result
 
