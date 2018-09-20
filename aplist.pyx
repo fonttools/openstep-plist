@@ -89,15 +89,6 @@ cdef bint advance_to_non_space(ParseInfo *pi):
     return False
 
 
-cdef array.array unicode_array_template = array.array('u', [])
-
-
-cdef inline void extend_array(array.array a, const Py_UNICODE *buf, Py_ssize_t length):
-    cdef Py_ssize_t i
-    for i in range(length):
-        a.append(buf[i])
-
-
 # Table mapping from NextStep Encoding to Unicode characters, used
 # for decoding octal escaped character codes within quoted plist strings.
 # Since the first 128 characters (0x0 - 0x7f) are identical to ASCII
@@ -192,6 +183,9 @@ cdef Py_UNICODE get_slashed_char(ParseInfo *pi):
     return ch
 
 
+cdef array.array unicode_array_template = array.array('u', [])
+
+
 cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
     cdef array.array string = array.clone(unicode_array_template, 0, zero=False)
     cdef const Py_UNICODE *start_mark = pi.curr
@@ -202,7 +196,7 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
         if ch == quote:
             break
         elif ch == c'\\':
-            extend_array(string, mark, pi.curr - mark)
+            array.extend_buffer(string, <char*>mark, pi.curr - mark)
             pi.curr += 1
             ch = get_slashed_char(pi)
             string.append(ch)
@@ -215,10 +209,10 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
             % line_number_strings(pi)
         )
     if not string:
-        extend_array(string, mark, pi.curr - mark)
+        array.extend_buffer(string, <char*>mark, pi.curr - mark)
     else:
         if mark != pi.curr:
-            extend_array(string, mark, pi.curr - mark)
+            array.extend_buffer(string, <char*>mark, pi.curr - mark)
     # Advance past the quote character before returning
     pi.curr += 1
 
@@ -239,7 +233,7 @@ cdef unicode parse_unquoted_plist_string(ParseInfo *pi):
     if pi.curr != mark:
         length = pi.curr - mark
         string = array.clone(unicode_array_template, 0, zero=False)
-        extend_array(string, mark, length)
+        array.extend_buffer(string, <char*>mark, length)
         return PyUnicode_FromUnicode(string.data.as_pyunicodes, length)
     raise ParseError("Unexpected EOF")
 
