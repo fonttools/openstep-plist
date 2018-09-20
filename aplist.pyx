@@ -2,13 +2,11 @@
 
 from cpython.unicode cimport (
     PyUnicode_FromUnicode, PyUnicode_AS_UNICODE, PyUnicode_GET_SIZE,
-    Py_UNICODE_ISDIGIT
 )
 from libc.stdint cimport uint8_t, uint32_t
 from cpython cimport array
 import array
 cimport cython
-from io import open
 
 
 cdef class ParseError(Exception):
