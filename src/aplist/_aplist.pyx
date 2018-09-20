@@ -41,8 +41,8 @@ cdef inline bint is_valid_unquoted_string_char(Py_UNICODE x):
 
 
 cdef bint advance_to_non_space(ParseInfo *pi):
-    """Returns true if the advance found something before the end of the buffer,
-    false otherwise.
+    """Returns true if the advance found something that's not whitespace
+    before the end of the buffer, false otherwise.
     """
     cdef Py_UNICODE ch2, ch3
     while pi.curr < pi.end:
@@ -73,7 +73,7 @@ cdef bint advance_to_non_space(ParseInfo *pi):
                     ch2 = pi.curr[0]
                     pi.curr += 1
                     if ch2 == c'*' and pi.curr < pi.end and pi.curr[0] == c'/':
-                        pi.curr += 1  # advance pat the '/'
+                        pi.curr += 1  # advance past the '/'
                         break
             else:
                 pi.curr -= 1

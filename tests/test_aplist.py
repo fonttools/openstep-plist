@@ -2,7 +2,9 @@ from __future__ import absolute_import, unicode_literals
 from .cdef_wrappers import (
     line_number_strings,
     is_valid_unquoted_string_char,
+    advance_to_non_space,
 )
+import pytest
 
 
 def test_line_number_strings():
@@ -37,3 +39,25 @@ def test_is_valid_unquoted_string_char():
     assert not is_valid_unquoted_string_char(0x00)  # NULL
     assert not is_valid_unquoted_string_char(0x0A)  # \n
     assert not is_valid_unquoted_string_char(0x0D)  # \r
+
+
+@pytest.mark.parametrize(
+    "string, offset, expected",
+    [
+        ("", 0, None),
+        (" a", 0, "a"),
+        (" a", 1, "a"),
+        (" a", 2, None),
+        ("\t\ta", 1, "a"),
+        ("\t\ta", 2, "a"),
+        ("\t\ta", 3, None),
+        ("abc//this is an inline comment", 3, None),
+        ("abc //also this\n", 3, None),
+        ("abc //this as well\n\nz", 3, "z"),
+        ("abc/this is not a comment", 3, "/"),
+        ("abc/", 3, "/"),  # not a comment either
+        ("abcd /* C-style comments! */z", 4, "z")
+    ]
+)
+def test_advance_to_non_space(string, offset, expected):
+    assert advance_to_non_space(string, offset) == expected
