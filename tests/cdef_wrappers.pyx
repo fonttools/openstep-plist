@@ -4,9 +4,10 @@
 from aplist._aplist cimport (
     _text,
     ParseInfo,
-    line_number_strings as c_line_number_strings,
-    is_valid_unquoted_string_char as c_is_valid_unquoted_string_char,
-    advance_to_non_space as c_advance_to_non_space,
+    line_number_strings as _line_number_strings,
+    is_valid_unquoted_string_char as _is_valid_unquoted_string_char,
+    advance_to_non_space as _advance_to_non_space,
+    get_slashed_char as _get_slashed_char
 )
 from cpython.unicode cimport (
     PyUnicode_FromUnicode, PyUnicode_AS_UNICODE, PyUnicode_GET_SIZE,
@@ -36,15 +37,20 @@ cdef class ParseContext:
 
 
 def is_valid_unquoted_string_char(Py_UNICODE c):
-    return c_is_valid_unquoted_string_char(c)
+    return _is_valid_unquoted_string_char(c)
 
 
 def line_number_strings(s, offset=0):
     cdef ParseContext ctx = ParseContext.fromstring(s, offset)
-    return c_line_number_strings(&ctx.pi)
+    return _line_number_strings(&ctx.pi)
 
 
 def advance_to_non_space(s, offset=0):
     cdef ParseContext ctx = ParseContext.fromstring(s, offset)
-    eof = not c_advance_to_non_space(&ctx.pi)
+    eof = not _advance_to_non_space(&ctx.pi)
     return None if eof else s[ctx.pi.curr - ctx.pi.begin]
+
+
+def get_slashed_char(s, offset=0):
+    cdef ParseContext ctx = ParseContext.fromstring(s, offset)
+    return _get_slashed_char(&ctx.pi)

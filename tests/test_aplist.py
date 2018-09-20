@@ -3,6 +3,7 @@ from .cdef_wrappers import (
     line_number_strings,
     is_valid_unquoted_string_char,
     advance_to_non_space,
+    get_slashed_char,
 )
 import pytest
 
@@ -61,3 +62,43 @@ def test_is_valid_unquoted_string_char():
 )
 def test_advance_to_non_space(string, offset, expected):
     assert advance_to_non_space(string, offset) == expected
+
+
+@pytest.mark.parametrize(
+    "string, expected",
+    [
+        ("000", "\x00"),
+        ("001", "\x01"),
+        ("002", "\x02"),
+        ("003", "\x03"),
+        ("004", "\x04"),
+        ("005", "\x05"),
+        ("006", "\x06"),
+        ("007", "\x07"),
+        ("012", "\n"),
+        ("111", "I"),
+        ("111", "I"),
+        ("200", "\xa0"),
+        ("201", "\xc0"),
+        ("375", "\xff"),
+        ("376", "\ufffd"),
+        ("376", "\ufffd"),
+        ("U0000", "\u0000"),
+        ("U0001", "\u0001"),
+        ("U0411", "\u0411"),
+        ("U00FA", "\u00fa"),
+        ("a", "\a"),
+        ("b", "\b"),
+        ("f", "\f"),
+        ("n", "\n"),
+        ("r", "\r"),
+        ("t", "\t"),
+        ("v", "\v"),
+        ('"', '"'),
+        ("\n", "\n"),
+        ("\\", "\\"),
+        ("z", "z"),
+    ]
+)
+def test_get_slashed_char(string, expected):
+    assert get_slashed_char(string) == expected
