@@ -1,6 +1,6 @@
 #cython: language_level=3, linetrace=True
 
-from aplist cimport is_valid_unquoted_string_char
+from aplist._aplist cimport is_valid_unquoted_string_char
 
 
 def test_is_valid_unquoted_string_char(x):
