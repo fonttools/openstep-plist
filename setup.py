@@ -1,5 +1,11 @@
 from setuptools import setup, find_packages, Extension
+from Cython.Build import cythonize
+import os
 
+
+extensions = [
+    Extension("aplist._aplist", sources=["src/aplist/_aplist.pyx"]),
+]
 
 setup(
     name="aplist",
@@ -10,7 +16,13 @@ setup(
     package_dir={"": "src"},
     packages=find_packages("src"),
     include_package_data=True,
-    ext_modules=[
-        Extension("aplist._aplist", sources=["src/aplist/_aplist.pyx"]),
-    ],
+    ext_modules=cythonize(
+        extensions,
+        annotate=os.environ.get("CYTHON_ANNOTATE") == "1",
+        compiler_directives={
+            "language_level": 3,
+            "linetrace": os.environ.get("CYTHON_TRACE") == "1",
+            "embedsignature": True,
+        }
+    ),
 )
