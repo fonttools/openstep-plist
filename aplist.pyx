@@ -282,8 +282,9 @@ cdef list parse_plist_array(ParseInfo *pi):
     return result
 
 
-cdef dict parse_plist_dict_content(ParseInfo *pi):
-    cdef dict result = {}
+cdef object parse_plist_dict_content(ParseInfo *pi):
+    cdef object dict_type = <object>pi.dict_type
+    result = dict_type()
     cdef object value
     cdef bint found_char
     cdef object key = parse_plist_string(pi, required=False)
@@ -320,8 +321,8 @@ cdef dict parse_plist_dict_content(ParseInfo *pi):
     return result
 
 
-cdef dict parse_plist_dict(ParseInfo *pi):
-    cdef dict result = parse_plist_dict_content(pi)
+cdef object parse_plist_dict(ParseInfo *pi):
+    result = parse_plist_dict_content(pi)
     if not advance_to_non_space(pi) or pi.curr[0] != c'}':
         raise ParseError(
             "Expected terminating '}' for dictionary at line %d"
@@ -423,7 +424,7 @@ cdef object parse_plist_object(ParseInfo *pi, bint required):
             )
 
 
-cpdef object loads(string):
+def loads(string, dict_type=dict):
     if not isinstance(string, unicode):
         string = string.decode("utf-8")
 
@@ -431,7 +432,12 @@ cpdef object loads(string):
     cdef Py_ssize_t length = PyUnicode_GET_SIZE(s)
     cdef Py_UNICODE* buf = PyUnicode_AS_UNICODE(s)
 
-    cdef ParseInfo pi = ParseInfo(buf, buf, buf + length)
+    cdef ParseInfo pi = ParseInfo(
+        begin=buf,
+        curr=buf,
+        end=buf + length,
+        dict_type=<void *>dict_type
+    )
 
     cdef object result = None
     if not advance_to_non_space(&pi):
@@ -449,36 +455,5 @@ cpdef object loads(string):
     return result
 
 
-cpdef object load(fp):
-    return loads(fp.read())
-
-
-def main(args=None):
-    import json
-    import base64
-
-    class Base64Encoder(json.JSONEncoder):
-
-        def default(self, obj):
-            if isinstance(obj, array.array):
-                return base64.b64encode(obj).decode()
-            return json.JSONEncoder.default(self, obj)
-
-
-    if args is None:
-        import sys
-
-        args = sys.argv[1:]
-
-    if not args:
-        return 1
-
-    infile = args[0]
-
-    with open(infile, "r", encoding="utf-8") as fp:
-        data = load(fp)
-
-    if len(args) > 1:
-        outfile = args[1]
-        with open(outfile, "w", encoding="utf-8") as fp:
-            json.dump(data, fp, cls=Base64Encoder, sort_keys=True, indent="  ")
+def load(fp, dict_type=dict):
+    return loads(fp.read(), dict_type=dict_type)
