@@ -5,7 +5,9 @@ branch = True
 plugins = Cython.Coverage
 
 # list of directories or packages to measure
-source = src/aplist
+source =
+    src/aplist
+    tests/
 
 [report]
 # Regexes for lines to exclude from consideration
