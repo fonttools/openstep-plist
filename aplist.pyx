@@ -236,7 +236,7 @@ cdef unicode parse_plist_string(ParseInfo *pi, required=True):
     cdef Py_UNICODE ch
     if not advance_to_non_space(pi):
         if required:
-            raise ParseError("Unexpected EOL while parsing tring")
+            raise ParseError("Unexpected EOF while parsing string")
     ch = pi.curr[0]
     if ch == c'\'' or ch == c'"':
         pi.curr += 1
@@ -246,7 +246,8 @@ cdef unicode parse_plist_string(ParseInfo *pi, required=True):
     else:
         if required:
             raise ParseError(
-                "Invalid string character at line %d" % line_number_strings(pi)
+                "Invalid string character at line %d: %r"
+                % (line_number_strings(pi), ch)
             )
     return None
 
@@ -260,7 +261,7 @@ cdef list parse_plist_array(ParseInfo *pi):
         found_char = advance_to_non_space(pi)
         if not found_char:
             raise ParseError(
-                "Expected ',' for array at line %d" % line_number_strings(pi)
+                "Missing ',' for array at line %d" % line_number_strings(pi)
             )
         if pi.curr[0] != c',':
             tmp = None
@@ -291,8 +292,8 @@ cdef object parse_plist_dict_content(ParseInfo *pi):
             )
 
         if pi.curr[0] == c';':
-            # This is a strings file using the shortcut format
-            # although this check here really applies to all plists.
+            # This is a 'strings resource' file using the shortcut format,
+            # although this check here really applies to all plists
             value = key
         elif pi.curr[0] == c'=':
             pi.curr += 1
@@ -339,7 +340,7 @@ cdef inline unsigned char from_hex_digit(unsigned char ch):
 cdef array.array get_data_bytes(ParseInfo *pi):
     cdef int first, second
     cdef int num_bytes_read = 0
-    cdef Py_UNICODE ch1
+    cdef Py_UNICODE ch1, ch2
     cdef array.array result = array.array('B')
     while pi.curr < pi.end:
         ch1 = pi.curr[0]
@@ -351,15 +352,21 @@ cdef array.array get_data_bytes(ParseInfo *pi):
             pi.curr += 1
             if pi.curr >= pi.end:
                 raise ParseError(
-                    "Malformed data byte group at line %d; uneven length"
+                    "Malformed data byte group at line %d: uneven length"
                     % line_number_strings(pi)
                 )
-            second = from_hex_digit(<unsigned char>pi.curr[0])
+            ch2 = pi.curr[0]
+            if ch2 == c'>':
+                raise ParseError(
+                    "Malformed data byte group at line %d: uneven length"
+                    % line_number_strings(pi)
+                )
+            second = from_hex_digit(<unsigned char>ch2)
             if second == 0xff:
                 raise ParseError(
-                    "Malformed data byte group at line %d; uneven length"
-                    % line_number_strings(pi)
-                )
+                    "Malformed data byte group at line %d: invalid hex digit: %r"
+                    % (line_number_strings(pi), ch2)
+            )
             result.append((first << 4) + second)
             pi.curr += 1
         elif (
@@ -373,16 +380,16 @@ cdef array.array get_data_bytes(ParseInfo *pi):
             pi.curr += 1
         else:
             raise ParseError(
-                "Malformed data byte group at line %d; invalid hex digit"
-                % line_number_strings(pi)
+                "Malformed data byte group at line %d: invalid hex digit: %r"
+                % (line_number_strings(pi), ch1)
             )
 
 
-cdef array.array parse_plist_data(ParseInfo *pi):
+cdef bytes parse_plist_data(ParseInfo *pi):
     cdef array.array data = get_data_bytes(pi)
     if pi.curr[0] == c">":
         pi.curr += 1  # move past '>'
-        return data
+        return bytes(data)
     else:
         raise ParseError(
             "Expected terminating '>' for data at line %d"

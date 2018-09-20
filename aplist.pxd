@@ -56,7 +56,7 @@ cdef unsigned char from_hex_digit(unsigned char ch)
 cdef array.array get_data_bytes(ParseInfo *pi)
 
 
-cdef array.array parse_plist_data(ParseInfo *pi)
+cdef bytes parse_plist_data(ParseInfo *pi)
 
 
 cdef object parse_plist_object(ParseInfo *pi, bint required=*)
