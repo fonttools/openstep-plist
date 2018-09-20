@@ -1,0 +1,36 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[co]
+*.o
+*.so
+
+# Distribution / Packaging
+*.egg
+*.egg-info
+*.eggs
+MANIFEST
+build
+dist
+
+# Unit test / coverage files
+.tox/*
+.cache/
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# cython annotated html files
+src/aplist/*.html
+tests/*.html
+
+# emacs backup files
+*~
+
+# OSX Finder
+.DS_Store
+
+# Generated c file(s) from Cython source
+src/aplist/*.c
+tests/*.c
