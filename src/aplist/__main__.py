@@ -7,7 +7,7 @@ import binascii
 # from collections import OrderedDict
 
 
-class Base64Encoder(json.JSONEncoder):
+class BytesEncoder(json.JSONEncoder):
 
     def default(self, obj):
         from glyphsLib.types import BinaryData
@@ -49,7 +49,7 @@ def main(args=None):
     if len(args) > 2:
         outfile = args[2]
         with open(outfile, "w", encoding="utf-8") as fp:
-            json.dump(data, fp, cls=Base64Encoder, sort_keys=True, indent="  ")
+            json.dump(data, fp, cls=BytesEncoder, sort_keys=True, indent="  ")
 
 
 if __name__ == "__main__":
