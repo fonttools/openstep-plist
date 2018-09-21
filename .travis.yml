@@ -71,9 +71,9 @@ matrix:
         - UPLOAD_COVERAGE=true
       before_install: false
       install:
-        - pip install tox
+        - if [ -z "$TRAVIS_TAG" ]; then pip install tox; fi
       script:
-        - tox -e py36-cov
+        - if [ -z "$TRAVIS_TAG" ]; tox -e py36-cov; fi
       after_success: false
     - os: linux
       python: 2.7
@@ -81,9 +81,9 @@ matrix:
         - UPLOAD_COVERAGE=true
       before_install: false
       install:
-        - pip install tox
+        - if [ -z "$TRAVIS_TAG" ]; then pip install tox; fi
       script:
-        - tox -e py27-cov
+        - if [ -z "$TRAVIS_TAG" ]; tox -e py27-cov; fi
       after_success: false
 
 before_install:
