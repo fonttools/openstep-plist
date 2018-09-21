@@ -129,7 +129,10 @@ def test_parse_unquoted_plist_string_EOF():
         parse_unquoted_plist_string("") == expected
 
 
-@pytest.mark.parametrize("string, expected", [("a", "a"), ('"a"', "a"), ("'a'", "a")])
+@pytest.mark.parametrize(
+    "string, expected",
+    [("a", "a"), ('"a"', "a"), ("'a'", "a"), ('"a\\012b"', ("a\nb"))],
+)
 def test_parse_plist_string(string, expected):
     assert parse_plist_string(string) == expected
 
@@ -137,6 +140,8 @@ def test_parse_plist_string(string, expected):
 def test_parse_plist_string_EOF():
     with pytest.raises(openstep_plist.ParseError, match="Unexpected EOF"):
         parse_plist_string("")
+    with pytest.raises(openstep_plist.ParseError, match="Unterminated quoted string"):
+        parse_plist_string("'a")
 
 
 def test_parse_plist_string_invalid_char():
@@ -215,6 +220,7 @@ def test_parse_plist_dict_invalid():
         ("<AA>", b"\xaa"),
         ("<B1B0AFBA>", b"\xb1\xb0\xaf\xba"),
         ("<AA BB>", b"\xaa\xbb"),
+        ("<cdef>", b"\xcd\xef"),
         ("<4142\n4344>", b"ABCD"),
     ],
 )
