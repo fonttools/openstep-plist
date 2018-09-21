@@ -179,7 +179,9 @@ cdef Py_UNICODE get_slashed_char(ParseInfo *pi):
     return ch
 
 
-cdef array.array unicode_array_template = array.array('u', [])
+# must convert array type code to native str type else when using
+# unicode literals on py27 one gets 'TypeError: must be char, not unicode'
+cdef array.array unicode_array_template = array.array(_str('u'), [])
 
 
 cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
@@ -343,7 +345,9 @@ cdef array.array get_data_bytes(ParseInfo *pi):
     cdef int first, second
     cdef int num_bytes_read = 0
     cdef Py_UNICODE ch1, ch2
-    cdef array.array result = array.array('B')
+    # must convert array type code to native str type else when using
+    # unicode literals on py27 one gets 'TypeError: must be char, not unicode'
+    cdef array.array result = array.array(_str('B'))
     while pi.curr < pi.end:
         ch1 = pi.curr[0]
         if ch1 == c'>':
@@ -438,6 +442,17 @@ cdef inline unicode _text(s):
         return unicode(s)
     else:
         raise TypeError("Could not convert to unicode.")
+
+
+cdef inline str _str(s):
+    if type(s) is str:
+        return <str>s
+    elif PY_MAJOR_VERSION < 3 and isinstance(s, unicode):
+        return (<unicode>s).encode('ascii')
+    elif isinstance(s, str):
+        return str(s)
+    else:
+        raise TypeError("Could not convert to str")
 
 
 def loads(string, dict_type=dict):
