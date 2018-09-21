@@ -93,21 +93,21 @@ class cython_sdist(_sdist):
 
 
 extensions = [
-    Extension("aplist._aplist", sources=["src/aplist/_aplist.pyx"]),
+    Extension("openstep_plist._parser", sources=["src/openstep_plist/_parser.pyx"]),
 ]
 
 with open('README.md', 'r') as f:
     long_description = f.read()
 
-version_file = os.path.join("src", "aplist", "_version.py")
+version_file = os.path.join("src", "openstep_plist", "_version.py")
 
 setup(
-    name="aplist",
+    name="openstep_plist",
     use_scm_version={"write_to": version_file},
     description="ASCII plist parser written in Cython",
     author="Cosimo Lupo",
     author_email="cosimo@anthrotype.com",
-    url="https://github.com/fonttools/aplist",
+    url="https://github.com/fonttools/openstep_plist",
     license="MIT",
     long_description=long_description,
     long_description_content_type="text/markdown",

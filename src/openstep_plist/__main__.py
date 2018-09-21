@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import aplist
+import openstep_plist
 import json
 import base64
 import binascii
@@ -28,7 +28,7 @@ def main(args=None):
 
     method = args[0]
     if method == "-a":
-        parse = aplist.load
+        parse = openstep_plist.load
     elif method == "-g":
 
         def parse(fp, dict_type=dict):

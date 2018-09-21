@@ -13,7 +13,7 @@ function run_tests {
 
     # Get absolute path to the pre-compiled wheel
     wheelhouse=$(abspath wheelhouse)
-    wheel=$(ls ${wheelhouse}/aplist*.whl | head -n 1)
+    wheel=$(ls ${wheelhouse}/openstep_plist*.whl | head -n 1)
     if [ ! -e "${wheel}" ]; then
         echo "error: can't find wheel in ${wheelhouse} folder" 1>&2
         exit 1
