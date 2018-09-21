@@ -7,7 +7,7 @@ env:
     - PLAT=x86_64
     - UNICODE_WIDTH=32
     - TWINE_USERNAME="anthrotype"
-    - secure: givplLUU0kkxrIdqFtxsRbP5lHJMhctNOTEKqCqaw8YeJe8cEbm3aNFB2/4EymZg4/XZ9D4dagPkitm+TobPmDMDzvroWERvr/1VS+9FGa4/zaEDgnQzX0hUv+YkPhaUxmZnWe6tvgsWqLFoIG2afV07KLFKsmNWYfSGYuyxe7bL1uXhutxLwiBgCN68l4kZSAkkWHM+Paq3+xTcG96Ptn5oxyCsssaXzFWmMQUbY9P9zEWoPcMS1GEkGhTjbZ2KkqE2/d5wf/jgIWWQar/mlJLm/I0ggZxVO0JxbSuW9H5DW+agyyQo71GmZG9qrUt4b1+xSYriUvpg4K7r15lwQCefxz9OozWr2Qppthd6DS987mRdlhczJrtxkw0/9UW1gbcyBoGUDfM6mKTBaqVx99iiPAZt11HQ/UzJK6NdyoY53kpM3Cx6RdhapuBXEX7ysJIZRK2GoTpTcFTtOoQNob3x6Js4ZC4U4cMaGeepdxsBm1zVvVXoHM4Cq18HX3rFps++1I0TIjwVQPFegSt7pFPfRTm3cZlvZqx/M2Q0eC6i4Fg4KiMi5IA5lPLKtH2IaG3Ba/EAWKiTN+rQGN4PIun6U1rLHMLU6rf6Pa1R8fDQVuhhoNd7DAOIzxlpPuPZGuJHkSwVDMAsBnbDjGwxuuCPPy36dclEfAD1qUBOR8c=
+    - secure: A/mxebMQ6+Bd+xdcmzx5ECI7mOriHLU7D56dZtY1trzFfayDssRgMOfzAmuAjW3fG89nrX1yrRB3MQA8aDwxfB6nCer0QQ8SBZyf6eMINLo0eFII84jJBxuTY8tbiXqpAUlFnwtkja2IntG+Ac3Sr5vea1lrWixwVKw2mMGc562lSYK26n7ty7Ga2PLHjGClVF5tMemlyG+z/M9/XaTXjAfGeMoTlBt35YHHx7Ihb4D5yZiQ8JoieuWrqPfuZ20oC9C0JiOFyFvFvoFRweYUJYR4CVdc9Tx+i60+vrlFTI2wZNp37JIwEgeJNcVLFGrK6/mQbmsOe8oINoiX+Sf+7RFKHbVKlanco+4VyKmvwNLGJev0UCORZbYCGC85qwpG1YJxrm6y4sXbqAVaq6pmo5h9NtaKgz1qI1f8mFR0jOWdslcXLPMt2P21/UHRdKuxD2Qo9yweJ4Vnu/eDFzdtaTL7/oNzNa9yDcOHITgF0wnp9vP+7cf1r/VQuunx91C/syzvc5BTywQ/NKjXw92UcTymvRN07LKWr6rzc3YxooahStnQMi5bOMJ3OVRTwEOlvYkvKJ9J8coVcwoiVnsxqKOKDHL+vtyYhpBA4sePOLQlz4ajv9oRKv5lA5bOD2XcwAmSxfud1zdpTB4Snldb4TFaHuFkAf4q3rgMg+59xbo=
 
 language: python
 # The travis Python version is unrelated to the version we build and test
@@ -103,7 +103,7 @@ after_success:
       tox -e codecov
     fi
   - |
-    if [ -n "$TRAVIS_TAG" ] && [ "$TRAVIS_REPO_SLUG" == "fonttools/aplist" ]; then
+    if [ -n "$TRAVIS_TAG" ] && [ "$TRAVIS_REPO_SLUG" == "fonttools/openstep-plist" ]; then
       pip install --upgrade twine
       twine upload wheelhouse/*.whl
       if [ "$BUILD_SDIST" == true ]; then
