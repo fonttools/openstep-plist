@@ -105,8 +105,8 @@ after_success:
   - |
     if [ -n "$TRAVIS_TAG" ] && [ "$TRAVIS_REPO_SLUG" == "fonttools/aplist" ]; then
       pip install --upgrade twine
-      twine upload .tox/dist/aplist*.whl
+      twine upload .tox/dist/*.whl
       if [ "$BUILD_SDIST" == true ]; then
-        twine upload .tox/dist/aplist*.zip
+        twine upload .tox/dist/*.zip
       fi
     fi
