@@ -10,8 +10,8 @@ import re
 
 
 argv = sys.argv[1:]
-needs_wheel = {'bdist_wheel'}.intersection(argv)
-wheel = ['wheel'] if needs_wheel else []
+needs_wheel = {"bdist_wheel"}.intersection(argv)
+wheel = ["wheel"] if needs_wheel else []
 
 # check if minimum required Cython is available
 cython_version_re = re.compile('\s*"cython\s*>=\s*([0-9][0-9\w\.]*)\s*"')
@@ -57,8 +57,7 @@ class cython_build_ext(_build_ext):
             )
         else:
             log.warn(
-                "%s not installed; using pre-generated *.c sources"
-                % required_cython
+                "%s not installed; using pre-generated *.c sources" % required_cython
             )
             for ext in self.distribution.ext_modules:
                 ext.sources = [re.sub("\.pyx$", ".c", n) for n in ext.sources]
@@ -74,6 +73,7 @@ class cython_sdist(_sdist):
     def run(self):
         if not with_cython:
             from distutils.errors import DistutilsSetupError
+
             raise DistutilsSetupError(
                 "Cython >= %s is required to make sdist" % cython_min_version
             )
@@ -84,19 +84,22 @@ class cython_sdist(_sdist):
             self.distribution.ext_modules,
             force=True,
             quiet=not self.verbose,
-            compiler_directives={
-                "language_level": 3,
-                "embedsignature": True,
-            }
+            compiler_directives={"language_level": 3, "embedsignature": True},
         )
         _sdist.run(self)
 
 
 extensions = [
-    Extension("openstep_plist._parser", sources=["src/openstep_plist/_parser.pyx"]),
+    Extension(
+        "openstep_plist._parser",
+        sources=["src/openstep_plist/_parser.pyx"],
+        include_dirs=(
+            ["vendor/msinttypes"] if os.name == "nt" and sys.version_info < (3,) else []
+        ),
+    )
 ]
 
-with open('README.md', 'r') as f:
+with open("README.md", "r") as f:
     long_description = f.read()
 
 version_file = os.path.join("src", "openstep_plist", "_version.py")
@@ -116,9 +119,6 @@ setup(
     include_package_data=True,
     ext_modules=extensions,
     setup_requires=["setuptools_scm"] + wheel,
-    cmdclass={
-        "build_ext": cython_build_ext,
-        "sdist": cython_sdist,
-    },
+    cmdclass={"build_ext": cython_build_ext, "sdist": cython_sdist},
     zip_safe=False,
 )
