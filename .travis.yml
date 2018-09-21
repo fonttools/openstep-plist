@@ -65,6 +65,22 @@ matrix:
       language: generic
       env:
         - MB_PYTHON_VERSION=3.7
+    - os: linux
+      python: 3.6
+      before_install: false
+      install:
+        - pip install tox
+      script:
+        - tox -e py36-cov
+      after_success: false
+    - os: linux
+      python: 2.7
+      before_install: false
+      install:
+        - pip install tox
+      script:
+        - tox -e py27-cov
+      after_success: false
 
 before_install:
   - source multibuild/common_utils.sh

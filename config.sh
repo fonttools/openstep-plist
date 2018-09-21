@@ -21,7 +21,7 @@ function run_tests {
 
     # select tox environment based on the current python version
     # E.g.: '2.7' -> 'py27'
-    TOXENV="py${MB_PYTHON_VERSION//\./}"
+    TOXENV="py${MB_PYTHON_VERSION//\./}-nocov"
 
     # Install pre-compiled wheel and run tests against it
     tox --installpkg "${wheel}" -e "${TOXENV}"
