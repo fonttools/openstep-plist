@@ -7,10 +7,6 @@ plugins = Cython.Coverage
 # list of directories or packages to measure
 source =
     src/openstep_plist
-    tests/
-
-omit =
-    tests/setup.py
 
 [report]
 # Regexes for lines to exclude from consideration
