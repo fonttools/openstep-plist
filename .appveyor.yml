@@ -7,7 +7,6 @@ environment:
     - PYTHON: "C:\\Python27"
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "32"
-      DISTUTILS_COMPILER: "mingw32"
 
     - PYTHON: "C:\\Python36-x64"
       PYTHON_VERSION: "3.6"
@@ -28,7 +27,6 @@ environment:
     - PYTHON: "C:\\Python27-x64"
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
-      DISTUTILS_COMPILER: "mingw32"
 
 matrix:
   fast_finish: true
