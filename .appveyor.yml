@@ -8,6 +8,7 @@ environment:
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "32"
       TOXENV: "py-{nocov,cov}"
+      UPLOAD_COVERAGE: true
 
     - PYTHON: "C:\\Python36-x64"
       PYTHON_VERSION: "3.6"
@@ -17,6 +18,7 @@ environment:
       PYTHON_VERSION: "3.7"
       PYTHON_ARCH: "64"
       TOXENV: "py-{nocov,cov}"
+      UPLOAD_COVERAGE: true
 
     - PYTHON: "C:\\Python36"
       PYTHON_VERSION: "3.6"
@@ -80,6 +82,10 @@ on_failure:
 
 on_success:
   # Deploy wheels on tags to PyPI
+  - ps: >-
+      if($env:UPLOAD_COVERAGE -eq 'true') {
+        tox -e codecov
+      }
   - ps: >-
       if($env:APPVEYOR_REPO_TAG -eq 'true') {
         Write-Output ("Deploying " + $env:APPVEYOR_REPO_TAG_NAME + " to PyPI...")
