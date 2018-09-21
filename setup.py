@@ -103,6 +103,7 @@ setup(
     use_scm_version={"write_to": version_file},
     author="Cosimo Lupo",
     author_email="cosimo@anthrotype.com",
+    url="https://github.com/fonttools/aplist",
     license="MIT",
     package_dir={"": "src"},
     packages=find_packages("src"),
