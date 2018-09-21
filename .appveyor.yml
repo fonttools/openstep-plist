@@ -97,4 +97,4 @@ on_success:
 
 artifacts:
   # archive the generated packages in the ci.appveyor.com build report
-  - path: dist\*.whl
+  - path: .tox\dist\*
