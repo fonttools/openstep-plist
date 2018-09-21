@@ -3,10 +3,15 @@ from setuptools.command.build_ext import build_ext as _build_ext
 from setuptools.command.sdist import sdist as _sdist
 from distutils import log
 import os
+import sys
 import pkg_resources
 from io import open
 import re
 
+
+argv = sys.argv[1:]
+needs_wheel = {'bdist_wheel'}.intersection(argv)
+wheel = ['wheel'] if needs_wheel else []
 
 # check if minimum required Cython is available
 cython_version_re = re.compile('\s*"cython\s*>=\s*([0-9][0-9\w\.]*)\s*"')
@@ -91,9 +96,11 @@ extensions = [
     Extension("aplist._aplist", sources=["src/aplist/_aplist.pyx"]),
 ]
 
+version_file = os.path.join("src", "aplist", "_version.py")
+
 setup(
     name="aplist",
-    version="0.1.0.dev0",
+    use_scm_version={"write_to": version_file},
     author="Cosimo Lupo",
     author_email="cosimo@anthrotype.com",
     license="MIT",
@@ -101,8 +108,10 @@ setup(
     packages=find_packages("src"),
     include_package_data=True,
     ext_modules=extensions,
+    setup_requires=["setuptools_scm"] + wheel,
     cmdclass={
         "build_ext": cython_build_ext,
         "sdist": cython_sdist,
     },
+    zip_safe=False,
 )
