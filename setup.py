@@ -94,7 +94,10 @@ extensions = [
         "openstep_plist._parser",
         sources=["src/openstep_plist/_parser.pyx"],
         include_dirs=(
-            ["vendor/msinttypes"] if os.name == "nt" and sys.version_info < (3,) else []
+            # need to include this for Visual Studio 2008 doesn't have stdint.h
+            [os.path.join(os.path.dirname(__file__), "vendor", "msinttypes")]
+            if os.name == "nt" and sys.version_info < (3,)
+            else []
         ),
     )
 ]
