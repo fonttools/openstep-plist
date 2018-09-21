@@ -96,15 +96,21 @@ extensions = [
     Extension("aplist._aplist", sources=["src/aplist/_aplist.pyx"]),
 ]
 
+with open('README.md', 'r') as f:
+    long_description = f.read()
+
 version_file = os.path.join("src", "aplist", "_version.py")
 
 setup(
     name="aplist",
     use_scm_version={"write_to": version_file},
+    description="ASCII plist parser written in Cython",
     author="Cosimo Lupo",
     author_email="cosimo@anthrotype.com",
     url="https://github.com/fonttools/aplist",
     license="MIT",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     package_dir={"": "src"},
     packages=find_packages("src"),
     include_package_data=True,
