@@ -107,7 +107,7 @@ setup(
     description="ASCII plist parser written in Cython",
     author="Cosimo Lupo",
     author_email="cosimo@anthrotype.com",
-    url="https://github.com/fonttools/openstep_plist",
+    url="https://github.com/fonttools/openstep-plist",
     license="MIT",
     long_description=long_description,
     long_description_content_type="text/markdown",
