@@ -6,7 +6,7 @@ plugins = Cython.Coverage
 
 # list of directories or packages to measure
 source =
-    src/aplist
+    src/openstep_plist
     tests/
 
 [report]
