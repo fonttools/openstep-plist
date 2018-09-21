@@ -55,7 +55,8 @@ install:
   # install tox to run test suite in a virtual environment
   - pip install --upgrade tox
 
-  # build wheel
+  # build wheel from sdist
+  - tox --sdistonly
   - tox -e wheel
   # get the full path to the compiled wheel (ugly but works)
   - dir /s /b .tox\dist\aplist*.whl > wheel.pth
