@@ -59,7 +59,7 @@ install:
   - tox --sdistonly
   - tox -e wheel
   # get the full path to the compiled wheel (ugly but works)
-  - dir /s /b .tox\dist\aplist*.whl > wheel.pth
+  - dir /s /b .tox\dist\openstep_plist*.whl > wheel.pth
   - set /p WHEEL_PATH=<wheel.pth
 
 build: false
