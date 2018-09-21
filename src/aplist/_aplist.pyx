@@ -444,15 +444,13 @@ cdef inline unicode _text(s):
         raise TypeError("Could not convert to unicode.")
 
 
-cdef inline str _str(s):
-    if type(s) is str:
-        return <str>s
-    elif PY_MAJOR_VERSION < 3 and isinstance(s, unicode):
-        return (<unicode>s).encode('ascii')
-    elif isinstance(s, str):
-        return str(s)
+cdef inline object _str(s):
+    if isinstance(s, bytes):
+        return s if PY_MAJOR_VERSION < 3 else s.decode('ascii')
+    elif isinstance(s, unicode):
+        return s.encode('ascii') if PY_MAJOR_VERSION < 3 else s
     else:
-        raise TypeError("Could not convert to str")
+        raise TypeError(type(s))
 
 
 def loads(string, dict_type=dict):
