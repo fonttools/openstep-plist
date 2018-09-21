@@ -54,6 +54,7 @@ class cython_build_ext(_build_ext):
                     "language_level": 3,
                     "embedsignature": True,
                 },
+                include_path=["src"],
             )
         else:
             log.warn(
@@ -85,21 +86,24 @@ class cython_sdist(_sdist):
             force=True,
             quiet=not self.verbose,
             compiler_directives={"language_level": 3, "embedsignature": True},
+            include_path=["src"],
         )
         _sdist.run(self)
 
+
+# need to include this for Visual Studio 2008 doesn't have stdint.h
+include_dirs=(
+    [os.path.join(os.path.dirname(__file__), "vendor", "msinttypes")]
+    if os.name == "nt" and sys.version_info < (3,)
+    else []
+)
 
 extensions = [
     Extension(
         "openstep_plist._parser",
         sources=["src/openstep_plist/_parser.pyx"],
-        include_dirs=(
-            # need to include this for Visual Studio 2008 doesn't have stdint.h
-            [os.path.join(os.path.dirname(__file__), "vendor", "msinttypes")]
-            if os.name == "nt" and sys.version_info < (3,)
-            else []
-        ),
-    )
+        include_dirs=include_dirs,
+    ),
 ]
 
 with open("README.md", "r") as f:
@@ -107,7 +111,7 @@ with open("README.md", "r") as f:
 
 version_file = os.path.join("src", "openstep_plist", "_version.py")
 
-setup(
+setup_args = dict(
     name="openstep_plist",
     use_scm_version={"write_to": version_file},
     description="ASCII plist parser written in Cython",
@@ -125,3 +129,7 @@ setup(
     cmdclass={"build_ext": cython_build_ext, "sdist": cython_sdist},
     zip_safe=False,
 )
+
+
+if __name__ == "__main__":
+    setup(**setup_args)
