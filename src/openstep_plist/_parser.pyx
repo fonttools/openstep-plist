@@ -112,7 +112,8 @@ cdef unsigned short* NEXT_STEP_DECODING_TABLE = [
 cdef Py_UNICODE get_slashed_char(ParseInfo *pi):
     cdef Py_UNICODE result
     cdef uint8_t num
-    cdef unsigned int codepoint, unum, num_digits
+    cdef unsigned int codepoint, num_digits
+    cdef unsigned long unum
     cdef unsigned long ch = pi.curr[0]
 
     pi.curr += 1
@@ -148,7 +149,7 @@ cdef Py_UNICODE get_slashed_char(ParseInfo *pi):
         num_digits = 4
         while pi.curr < pi.end and num_digits > 0:
             ch = pi.curr[0]
-            if ch < 128 and isxdigit(ch):
+            if ch < 128 and isxdigit(<unsigned char>ch):
                 pi.curr += 1
                 unum = (unum << 4) + (
                     (ch - c'0') if ch <= c'9' else (
@@ -220,7 +221,6 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
 cdef unicode parse_unquoted_plist_string(ParseInfo *pi):
     cdef const Py_UNICODE *mark = pi.curr
     cdef Py_UNICODE ch
-    cdef array.array string
     cdef Py_ssize_t length
     while pi.curr < pi.end:
         ch = pi.curr[0]
@@ -230,9 +230,7 @@ cdef unicode parse_unquoted_plist_string(ParseInfo *pi):
             break
     if pi.curr != mark:
         length = pi.curr - mark
-        string = array.clone(unicode_array_template, 0, zero=False)
-        array.extend_buffer(string, <char*>mark, length)
-        return PyUnicode_FromUnicode(string.data.as_pyunicodes, length)
+        return PyUnicode_FromUnicode(mark, length)
     raise ParseError("Unexpected EOF")
 
 
