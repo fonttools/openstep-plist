@@ -92,23 +92,20 @@ class cython_sdist(_sdist):
 
 
 # need to include this for Visual Studio 2008 doesn't have stdint.h
-include_dirs=(
+include_dirs = (
     [os.path.join(os.path.dirname(__file__), "vendor", "msinttypes")]
     if os.name == "nt" and sys.version_info < (3,)
     else []
 )
 
+cython_modules = ["parser", "_compat"]
 extensions = [
     Extension(
-        "openstep_plist.parser",
-        sources=["src/openstep_plist/parser.pyx"],
+        "openstep_plist." + mod,
+        sources=["src/openstep_plist/%s.pyx" % mod],
         include_dirs=include_dirs,
-    ),
-    Extension(
-        "openstep_plist._compat",
-        sources=["src/openstep_plist/_compat.pyx"],
-        include_dirs=include_dirs,
-    ),
+    )
+    for mod in cython_modules
 ]
 
 with open("README.md", "r") as f:
