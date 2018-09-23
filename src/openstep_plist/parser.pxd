@@ -1,4 +1,4 @@
-#cython: language_level=3, linetrace=True
+#cython: language_level=3
 
 from libc.stdint cimport uint32_t
 from cpython cimport array
@@ -60,6 +60,3 @@ cdef bytes parse_plist_data(ParseInfo *pi)
 
 
 cdef object parse_plist_object(ParseInfo *pi, bint required=*)
-
-
-cdef unicode _text(s)

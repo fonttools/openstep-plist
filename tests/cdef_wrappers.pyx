@@ -2,7 +2,6 @@
 #distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
 from openstep_plist.parser cimport (
-    _text,
     ParseInfo,
     line_number_strings as _line_number_strings,
     is_valid_unquoted_string_char as _is_valid_unquoted_string_char,
@@ -11,6 +10,7 @@ from openstep_plist.parser cimport (
     parse_unquoted_plist_string as _parse_unquoted_plist_string,
     parse_plist_string as _parse_plist_string,
 )
+from openstep_plist._compat cimport tounicode
 from cpython.unicode cimport (
     PyUnicode_FromUnicode, PyUnicode_AS_UNICODE, PyUnicode_GET_SIZE,
 )
@@ -25,7 +25,7 @@ cdef class ParseContext:
     @classmethod
     def fromstring(ParseContext cls, string, Py_ssize_t offset=0, dict_type=dict):
         cdef ParseContext self = ParseContext.__new__(cls)
-        self.s = _text(string)
+        self.s = tounicode(string)
         cdef Py_ssize_t length = PyUnicode_GET_SIZE(self.s)
         cdef Py_UNICODE* buf = PyUnicode_AS_UNICODE(self.s)
         self.dict_type = dict_type

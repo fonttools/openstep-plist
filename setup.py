@@ -104,6 +104,11 @@ extensions = [
         sources=["src/openstep_plist/parser.pyx"],
         include_dirs=include_dirs,
     ),
+    Extension(
+        "openstep_plist._compat",
+        sources=["src/openstep_plist/_compat.pyx"],
+        include_dirs=include_dirs,
+    ),
 ]
 
 with open("README.md", "r") as f:

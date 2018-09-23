@@ -10,6 +10,8 @@ from cpython.version cimport PY_MAJOR_VERSION
 import array
 cimport cython
 
+from ._compat cimport tounicode, tostr
+
 
 cdef uint32_t line_number_strings(ParseInfo *pi):
     # warning: doesn't have a good idea of Unicode line separators
@@ -182,7 +184,7 @@ cdef Py_UNICODE get_slashed_char(ParseInfo *pi):
 
 # must convert array type code to native str type else when using
 # unicode literals on py27 one gets 'TypeError: must be char, not unicode'
-cdef array.array unicode_array_template = array.array(_str('u'), [])
+cdef array.array unicode_array_template = array.array(tostr('u'), [])
 
 
 cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
@@ -345,7 +347,7 @@ cdef array.array get_data_bytes(ParseInfo *pi):
     cdef Py_UNICODE ch1, ch2
     # must convert array type code to native str type else when using
     # unicode literals on py27 one gets 'TypeError: must be char, not unicode'
-    cdef array.array result = array.array(_str('B'))
+    cdef array.array result = array.array(tostr('B'))
     while pi.curr < pi.end:
         ch1 = pi.curr[0]
         if ch1 == c'>':
@@ -431,28 +433,8 @@ cdef object parse_plist_object(ParseInfo *pi, bint required=True):
             )
 
 
-cdef inline unicode _text(s):
-    if type(s) is unicode:
-        return <unicode>s
-    elif PY_MAJOR_VERSION < 3 and isinstance(s, bytes):
-        return (<bytes>s).decode('ascii')
-    elif isinstance(s, unicode):
-        return unicode(s)
-    else:
-        raise TypeError("Could not convert to unicode.")
-
-
-cdef inline object _str(s):
-    if isinstance(s, bytes):
-        return s if PY_MAJOR_VERSION < 3 else s.decode('ascii')
-    elif isinstance(s, unicode):
-        return s.encode('ascii') if PY_MAJOR_VERSION < 3 else s
-    else:
-        raise TypeError(type(s))
-
-
 def loads(string, dict_type=dict):
-    cdef unicode s = _text(string)
+    cdef unicode s = tounicode(string)
     cdef Py_ssize_t length = PyUnicode_GET_SIZE(s)
     cdef Py_UNICODE* buf = PyUnicode_AS_UNICODE(s)
 
