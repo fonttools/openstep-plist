@@ -100,8 +100,8 @@ include_dirs=(
 
 extensions = [
     Extension(
-        "openstep_plist._parser",
-        sources=["src/openstep_plist/_parser.pyx"],
+        "openstep_plist.parser",
+        sources=["src/openstep_plist/parser.pyx"],
         include_dirs=include_dirs,
     ),
 ]

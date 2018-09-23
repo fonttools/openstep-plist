@@ -1,4 +1,4 @@
-from ._parser import load, loads, ParseError
+from .parser import load, loads, ParseError
 
 try:
     from ._version import version as __version__

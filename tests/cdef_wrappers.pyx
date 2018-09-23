@@ -1,7 +1,7 @@
 #cython: language_level=3
 #distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
-from openstep_plist._parser cimport (
+from openstep_plist.parser cimport (
     _text,
     ParseInfo,
     line_number_strings as _line_number_strings,
