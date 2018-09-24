@@ -220,7 +220,42 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
     return PyUnicode_FromUnicode(string.data.as_pyunicodes, len(string))
 
 
-cdef unicode parse_unquoted_plist_string(ParseInfo *pi):
+cdef object string_to_number(unicode s):
+    """Try to convert string s to either int or float, else return unmodified
+    if it is not a number.
+    """
+    cdef Py_UNICODE c
+    cdef Py_ssize_t length = PyUnicode_GET_SIZE(s)
+
+    if length == 0:  # empty string
+        return s
+
+    # if it doesn't start with "-" nor digit, keep as is
+    c = s[0]
+    if c == '-':
+        if length < 2:
+            return s
+        c = s[1]
+        if c > '9' or c < '0':
+            return s
+    elif c > '9' or c < '0':
+        return s
+
+    try:
+        # fast path for floats containing decimal point
+        if "." in s:
+            return float(s)
+        else:
+            try:
+                return int(s)
+            except ValueError:
+                # handles scientific notation (unlikely)
+                return float(s)
+    except ValueError:
+        return s
+
+
+cdef object parse_unquoted_plist_string(ParseInfo *pi, ensure_string=False):
     cdef const Py_UNICODE *mark = pi.curr
     cdef Py_UNICODE ch
     cdef Py_ssize_t length
@@ -232,11 +267,14 @@ cdef unicode parse_unquoted_plist_string(ParseInfo *pi):
             break
     if pi.curr != mark:
         length = pi.curr - mark
-        return PyUnicode_FromUnicode(mark, length)
+        if ensure_string or not pi.use_numbers:
+            return PyUnicode_FromUnicode(mark, length)
+        else:
+            return string_to_number(PyUnicode_FromUnicode(mark, length))
     raise ParseError("Unexpected EOF")
 
 
-cdef unicode parse_plist_string(ParseInfo *pi, required=True):
+cdef unicode parse_plist_string(ParseInfo *pi, required=True, ensure_string=False):
     cdef Py_UNICODE ch
     if not advance_to_non_space(pi):
         if required:
@@ -246,7 +284,7 @@ cdef unicode parse_plist_string(ParseInfo *pi, required=True):
         pi.curr += 1
         return parse_quoted_plist_string(pi, ch)
     elif is_valid_unquoted_string_char(ch):
-        return parse_unquoted_plist_string(pi)
+        return parse_unquoted_plist_string(pi, ensure_string=ensure_string)
     else:
         if required:
             raise ParseError(
@@ -286,7 +324,7 @@ cdef object parse_plist_dict_content(ParseInfo *pi):
     result = dict_type()
     cdef object value
     cdef bint found_char
-    cdef object key = parse_plist_string(pi, required=False)
+    cdef object key = parse_plist_string(pi, required=False, ensure_string=True)
 
     while key is not None:
         found_char = advance_to_non_space(pi)
@@ -313,7 +351,7 @@ cdef object parse_plist_dict_content(ParseInfo *pi):
         found_char = advance_to_non_space(pi)
         if found_char and pi.curr[0] == c';':
             pi.curr += 1
-            key = parse_plist_string(pi, required=False)
+            key = parse_plist_string(pi, required=False, ensure_string=True)
         else:
             raise ParseError("Missing ';' on line %d" % line_number_strings(pi))
 
@@ -433,7 +471,7 @@ cdef object parse_plist_object(ParseInfo *pi, bint required=True):
             )
 
 
-def loads(string, dict_type=dict):
+def loads(string, dict_type=dict, bint use_numbers=False):
     cdef unicode s = tounicode(string)
     cdef Py_ssize_t length = PyUnicode_GET_SIZE(s)
     cdef Py_UNICODE* buf = PyUnicode_AS_UNICODE(s)
@@ -442,7 +480,8 @@ def loads(string, dict_type=dict):
         begin=buf,
         curr=buf,
         end=buf + length,
-        dict_type=<void *>dict_type
+        dict_type=<void *>dict_type,
+        use_numbers=use_numbers,
     )
 
     cdef const Py_UNICODE *begin = pi.curr
@@ -468,5 +507,5 @@ def loads(string, dict_type=dict):
     return result
 
 
-def load(fp, dict_type=dict):
-    return loads(fp.read(), dict_type=dict_type)
+def load(fp, dict_type=dict, use_numbers=False):
+    return loads(fp.read(), dict_type=dict_type, use_numbers=use_numbers)

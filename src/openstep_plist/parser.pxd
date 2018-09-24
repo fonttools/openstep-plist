@@ -14,6 +14,7 @@ ctypedef struct ParseInfo:
     const Py_UNICODE *curr
     const Py_UNICODE *end
     void *dict_type
+    bint use_numbers
 
 
 cdef class ParseError(Exception):
@@ -35,10 +36,13 @@ cdef Py_UNICODE get_slashed_char(ParseInfo *pi)
 cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote)
 
 
-cdef unicode parse_unquoted_plist_string(ParseInfo *pi)
+cdef object string_to_number(unicode s)
 
 
-cdef unicode parse_plist_string(ParseInfo *pi, required=*)
+cdef object parse_unquoted_plist_string(ParseInfo *pi, ensure_string=*)
+
+
+cdef unicode parse_plist_string(ParseInfo *pi, required=*, ensure_string=*)
 
 
 cdef list parse_plist_array(ParseInfo *pi)

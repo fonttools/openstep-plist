@@ -23,7 +23,13 @@ cdef class ParseContext:
     cdef object dict_type
 
     @classmethod
-    def fromstring(ParseContext cls, string, Py_ssize_t offset=0, dict_type=dict):
+    def fromstring(
+            ParseContext cls,
+            string,
+            Py_ssize_t offset=0,
+            dict_type=dict,
+            bint use_numbers=False
+    ):
         cdef ParseContext self = ParseContext.__new__(cls)
         self.s = tounicode(string)
         cdef Py_ssize_t length = PyUnicode_GET_SIZE(self.s)
@@ -34,6 +40,7 @@ cdef class ParseContext:
             curr=buf + offset,
             end=buf + length,
             dict_type=<void*>dict_type,
+            use_numbers=use_numbers,
         )
         return self
 
