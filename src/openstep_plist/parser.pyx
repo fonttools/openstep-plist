@@ -220,7 +220,7 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
     return PyUnicode_FromUnicode(string.data.as_pyunicodes, len(string))
 
 
-cdef object string_to_number(unicode s):
+cpdef object string_to_number(unicode s, bint required=True):
     """Try to convert string s to either int or float, else return unmodified
     if it is not a number.
     """
@@ -228,17 +228,25 @@ cdef object string_to_number(unicode s):
     cdef Py_ssize_t length = PyUnicode_GET_SIZE(s)
 
     if length == 0:  # empty string
+        if required:
+            raise ValueError("invalid number: string is empty")
         return s
 
     # if it doesn't start with "-" nor digit, keep as is
     c = s[0]
     if c == '-':
         if length < 2:
+            if required:
+                raise ValueError(f"invalid number: {s!r}")
             return s
         c = s[1]
         if c > '9' or c < '0':
+            if required:
+                raise ValueError(f"invalid number: {s!r}")
             return s
     elif c > '9' or c < '0':
+        if required:
+            raise ValueError(f"invalid number: {s!r}")
         return s
 
     try:
@@ -252,10 +260,12 @@ cdef object string_to_number(unicode s):
                 # handles scientific notation (unlikely)
                 return float(s)
     except ValueError:
+        if required:
+            raise
         return s
 
 
-cdef object parse_unquoted_plist_string(ParseInfo *pi, ensure_string=False):
+cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=False):
     cdef const Py_UNICODE *mark = pi.curr
     cdef Py_UNICODE ch
     cdef Py_ssize_t length
@@ -270,11 +280,13 @@ cdef object parse_unquoted_plist_string(ParseInfo *pi, ensure_string=False):
         if ensure_string or not pi.use_numbers:
             return PyUnicode_FromUnicode(mark, length)
         else:
-            return string_to_number(PyUnicode_FromUnicode(mark, length))
+            return string_to_number(PyUnicode_FromUnicode(mark, length), required=False)
     raise ParseError("Unexpected EOF")
 
 
-cdef unicode parse_plist_string(ParseInfo *pi, required=True, ensure_string=False):
+cdef unicode parse_plist_string(
+    ParseInfo *pi, bint required=True, bint ensure_string=False
+):
     cdef Py_UNICODE ch
     if not advance_to_non_space(pi):
         if required:
