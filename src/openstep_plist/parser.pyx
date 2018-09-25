@@ -322,9 +322,7 @@ cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=False)
     raise ParseError("Unexpected EOF")
 
 
-cdef unicode parse_plist_string(
-    ParseInfo *pi, bint required=True, bint ensure_string=False
-):
+cdef unicode parse_plist_string(ParseInfo *pi, bint required=True):
     cdef Py_UNICODE ch
     if not advance_to_non_space(pi):
         if required:
@@ -334,7 +332,7 @@ cdef unicode parse_plist_string(
         pi.curr += 1
         return parse_quoted_plist_string(pi, ch)
     elif is_valid_unquoted_string_char(ch):
-        return parse_unquoted_plist_string(pi, ensure_string=ensure_string)
+        return parse_unquoted_plist_string(pi, ensure_string=True)
     else:
         if required:
             raise ParseError(
@@ -374,7 +372,7 @@ cdef object parse_plist_dict_content(ParseInfo *pi):
     result = dict_type()
     cdef object value
     cdef bint found_char
-    cdef object key = parse_plist_string(pi, required=False, ensure_string=True)
+    cdef object key = parse_plist_string(pi, required=False)
 
     while key is not None:
         found_char = advance_to_non_space(pi)
@@ -401,7 +399,7 @@ cdef object parse_plist_dict_content(ParseInfo *pi):
         found_char = advance_to_non_space(pi)
         if found_char and pi.curr[0] == c';':
             pi.curr += 1
-            key = parse_plist_string(pi, required=False, ensure_string=True)
+            key = parse_plist_string(pi, required=False)
         else:
             raise ParseError("Missing ';' on line %d" % line_number_strings(pi))
 

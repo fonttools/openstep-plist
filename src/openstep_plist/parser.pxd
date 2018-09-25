@@ -48,7 +48,7 @@ cdef UnquotedType get_unquoted_string_type(const Py_UNICODE *buf, Py_ssize_t len
 cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=*)
 
 
-cdef unicode parse_plist_string(ParseInfo *pi, bint required=*, bint ensure_string=*)
+cdef unicode parse_plist_string(ParseInfo *pi, bint required=*)
 
 
 cdef list parse_plist_array(ParseInfo *pi)
