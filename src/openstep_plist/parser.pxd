@@ -36,9 +36,6 @@ cdef Py_UNICODE get_slashed_char(ParseInfo *pi)
 cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote)
 
 
-cpdef object string_to_number(unicode s, bint required=*)
-
-
 cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=*)
 
 

@@ -220,55 +220,46 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
     return PyUnicode_FromUnicode(string.data.as_pyunicodes, len(string))
 
 
-cpdef object string_to_number(unicode s, bint required=True):
-    """Try to convert string s to either int or float, else return unmodified
-    if it is not a number.
+def string_to_number(unicode s not None):
+    """Convert string s to either int or float.
+    Raises ValueError if the string is not a number.
     """
     cdef Py_UNICODE c
     cdef Py_ssize_t length = PyUnicode_GET_SIZE(s)
 
     if length == 0:  # empty string
-        if required:
-            raise ValueError("invalid number: string is empty")
-        return s
+        raise ValueError("invalid number: string is empty")
 
-    # if it doesn't start with "-" nor digit, keep as is
+    # check that it starts with "-" or digit
     c = s[0]
     if c == '-':
         if length < 2:
-            if required:
-                raise ValueError(f"invalid number: {s!r}")
-            return s
+            raise ValueError(f"invalid number: {s!r}")
         c = s[1]
         if c > '9' or c < '0':
-            if required:
-                raise ValueError(f"invalid number: {s!r}")
-            return s
-    elif c > '9' or c < '0':
-        if required:
             raise ValueError(f"invalid number: {s!r}")
-        return s
+    elif c > '9' or c < '0':
+        raise ValueError(f"invalid number: {s!r}")
 
-    try:
-        # fast path for floats containing decimal point
-        if "." in s:
+    # fast path for floats containing decimal point
+    if "." in s:
+        return float(s)
+    else:
+        try:
+            return int(s)
+        except ValueError:
+            # handles scientific notation (unlikely)
             return float(s)
-        else:
-            try:
-                return int(s)
-            except ValueError:
-                # handles scientific notation (unlikely)
-                return float(s)
-    except ValueError:
-        if required:
-            raise
-        return s
 
 
 cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=False):
-    cdef const Py_UNICODE *mark = pi.curr
-    cdef Py_UNICODE ch
-    cdef Py_ssize_t length
+    cdef:
+        const Py_UNICODE *mark = pi.curr
+        Py_UNICODE ch
+        Py_ssize_t length, i
+        unicode s
+        bint can_be_number = True
+
     while pi.curr < pi.end:
         ch = pi.curr[0]
         if is_valid_unquoted_string_char(ch):
@@ -277,10 +268,36 @@ cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=False)
             break
     if pi.curr != mark:
         length = pi.curr - mark
-        if ensure_string or not pi.use_numbers:
-            return PyUnicode_FromUnicode(mark, length)
-        else:
-            return string_to_number(PyUnicode_FromUnicode(mark, length), required=False)
+        s = PyUnicode_FromUnicode(mark, length)
+
+        if not ensure_string and pi.use_numbers:
+            # if it doesn't start with a digit, or a '-' followed by a digit,
+            # then it can't be a number and we keep it as string
+            ch = mark[0]
+            if ch == c'-':
+                if length < 2:
+                    can_be_number = False
+                else:
+                    ch = mark[1]
+                    if ch > c'9' or ch < c'0':
+                        can_be_number = False
+            elif ch > c'9' or ch < c'0':
+                can_be_number = False
+
+            if can_be_number:
+                # if contains a decimal point we try to parse it as a float,
+                # or else as an int; if either fails, we keep is as string.
+                # We don't support scientific notation...
+                try:
+                    for i in range(length):
+                        if mark[i] == c'.':
+                            return float(s)
+                    return int(s)
+                except ValueError:
+                    pass
+
+        return s
+
     raise ParseError("Unexpected EOF")
 
 
