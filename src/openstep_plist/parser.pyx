@@ -220,7 +220,7 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
     return PyUnicode_FromUnicode(string.data.as_pyunicodes, len(string))
 
 
-def string_to_number(unicode s not None):
+def string_to_number(unicode s not None, bint required=True):
     """Convert string s to either int or float.
     Raises ValueError if the string is not a number.
     """
@@ -232,12 +232,19 @@ def string_to_number(unicode s not None):
     if length:
         buf = PyUnicode_AS_UNICODE(s)
         kind = get_unquoted_string_type(buf, length)
-        if kind == UNQUOTED_FLOAT:
-            return float(s)
-        elif kind == UNQUOTED_INTEGER:
-            return int(s)
+        try:
+            if kind == UNQUOTED_FLOAT:
+                return float(s)
+            elif kind == UNQUOTED_INTEGER:
+                return int(s)
+        except ValueError:
+            if required:
+                raise
 
-    raise ValueError(f"Could not convert string to float or int: {s!r}")
+    if required:
+        raise ValueError(f"Could not convert string to float or int: {s!r}")
+    else:
+        return s
 
 
 cdef UnquotedType get_unquoted_string_type(

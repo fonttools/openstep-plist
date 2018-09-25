@@ -300,31 +300,17 @@ def test_loads_dict_type():
 
 @pytest.mark.parametrize(
     "string, expected",
-    [
-        ("2", 2),
-        ("-2", -2),
-        ("1.5", 1.5),
-        ("-1.5", -1.5),
-        ("23.99999", 23.99999),
-    ]
+    [("2", 2), ("-2", -2), ("1.5", 1.5), ("-1.5", -1.5), ("23.99999", 23.99999)],
 )
 def test_string_to_number(string, expected):
     assert string_to_number(string) == expected
 
 
-def test_string_to_number_invalid():
-    with pytest.raises(ValueError):
-        string_to_number("")
-    with pytest.raises(ValueError):
-        string_to_number("10000s")
-    with pytest.raises(ValueError):
-        string_to_number(" 1.5")
-    with pytest.raises(ValueError):
-        string_to_number("-")
-
-    # These two may be valid use cases but we don't support them now.
-    # we may revise it later
-    with pytest.raises(ValueError):
-        string_to_number(".5")
-    with pytest.raises(ValueError):
-        string_to_number("1e-5")
+@pytest.mark.parametrize("string", ["", "10000s", " 1.5", "-", ".5", "1e-4"])
+@pytest.mark.parametrize("required", [True, False])
+def test_string_to_number_invalid(string, required):
+    if required:
+        with pytest.raises(ValueError):
+            string_to_number(string)
+    else:
+        string_to_number(string, required=False) == string
