@@ -11,6 +11,7 @@ from .cdef_wrappers import (
     parse_plist_string,
 )
 import openstep_plist
+from openstep_plist.parser import string_to_number
 
 import pytest
 
@@ -295,3 +296,35 @@ def test_loads_dict_type():
     assert openstep_plist.loads(
         "{z = (a, b); y = (c, d); a = 'hello world';}", dict_type=OrderedDict
     ) == (OrderedDict([("z", ["a", "b"]), ("y", ["c", "d"]), ("a", "hello world")]))
+
+
+@pytest.mark.parametrize(
+    "string, expected",
+    [
+        ("2", 2),
+        ("-2", -2),
+        ("1.5", 1.5),
+        ("-1.5", -1.5),
+        ("23.99999", 23.99999),
+    ]
+)
+def test_string_to_number(string, expected):
+    assert string_to_number(string) == expected
+
+
+def test_string_to_number_invalid():
+    with pytest.raises(ValueError):
+        string_to_number("")
+    with pytest.raises(ValueError):
+        string_to_number("10000s")
+    with pytest.raises(ValueError):
+        string_to_number(" 1.5")
+    with pytest.raises(ValueError):
+        string_to_number("-")
+
+    # These two may be valid use cases but we don't support them now.
+    # we may revise it later
+    with pytest.raises(ValueError):
+        string_to_number(".5")
+    with pytest.raises(ValueError):
+        string_to_number("1e-5")
