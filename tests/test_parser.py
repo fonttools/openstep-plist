@@ -1,6 +1,7 @@
 from __future__ import absolute_import, unicode_literals
 import sys
 from io import StringIO, BytesIO
+from collections import OrderedDict
 from .cdef_wrappers import (
     line_number_strings,
     is_valid_unquoted_string_char,
@@ -275,3 +276,22 @@ def test_load_from_bytes():
     else:
         with pytest.raises(TypeError, match="Could not convert to unicode"):
             openstep_plist.loads(b"{a=1;}")
+
+
+@pytest.mark.parametrize(
+    "string, expected",
+    [
+        ("{a = 2;}", {"a": 2}),
+        ("{a = {b = -2;};}", {"a": {"b": -2}}),
+        ("{a = (1.5, -23.9999);}", {"a": [1.5, -23.9999]}),
+        ("{a = x123; b = -c; minus = -;}", {"a": "x123", "b": "-c", "minus": "-"}),
+    ],
+)
+def test_loads_use_numbers(string, expected):
+    assert openstep_plist.loads(string, use_numbers=True) == expected
+
+
+def test_loads_dict_type():
+    assert openstep_plist.loads(
+        "{z = (a, b); y = (c, d); a = 'hello world';}", dict_type=OrderedDict
+    ) == (OrderedDict([("z", ["a", "b"]), ("y", ["c", "d"]), ("a", "hello world")]))
