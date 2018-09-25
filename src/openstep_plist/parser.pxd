@@ -36,6 +36,15 @@ cdef Py_UNICODE get_slashed_char(ParseInfo *pi)
 cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote)
 
 
+cdef enum UnquotedType:
+    UNQUOTED_STRING = 0
+    UNQUOTED_INTEGER = 1
+    UNQUOTED_FLOAT = 2
+
+
+cdef UnquotedType get_unquoted_string_type(const Py_UNICODE *buf, Py_ssize_t length)
+
+
 cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=*)
 
 

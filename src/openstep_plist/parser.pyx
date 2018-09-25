@@ -224,32 +224,57 @@ def string_to_number(unicode s not None):
     """Convert string s to either int or float.
     Raises ValueError if the string is not a number.
     """
-    cdef Py_UNICODE c
-    cdef Py_ssize_t length = PyUnicode_GET_SIZE(s)
+    cdef:
+        Py_UNICODE c
+        Py_UNICODE* buf
+        Py_ssize_t length = PyUnicode_GET_SIZE(s)
 
-    if length == 0:  # empty string
-        raise ValueError("invalid number: string is empty")
-
-    # check that it starts with "-" or digit
-    c = s[0]
-    if c == '-':
-        if length < 2:
-            raise ValueError(f"invalid number: {s!r}")
-        c = s[1]
-        if c > '9' or c < '0':
-            raise ValueError(f"invalid number: {s!r}")
-    elif c > '9' or c < '0':
-        raise ValueError(f"invalid number: {s!r}")
-
-    # fast path for floats containing decimal point
-    if "." in s:
-        return float(s)
-    else:
-        try:
-            return int(s)
-        except ValueError:
-            # handles scientific notation (unlikely)
+    if length:
+        buf = PyUnicode_AS_UNICODE(s)
+        kind = get_unquoted_string_type(buf, length)
+        if kind == UNQUOTED_FLOAT:
             return float(s)
+        elif kind == UNQUOTED_INTEGER:
+            return int(s)
+
+    raise ValueError(f"Could not convert string to float or int: {s!r}")
+
+
+cdef UnquotedType get_unquoted_string_type(
+    const Py_UNICODE *buf, Py_ssize_t length
+):
+    """Check if Py_UNICODE array starts with a digit, or '-' followed
+    by a digit, and if it contains a decimal point '.'.
+    Return 0 if string cannot contain a number, 1 if it may contain an
+    integer, and 2 if it may contain a float.
+    """
+    # NOTE: floats in scientific notation (e.g. 1e-5) or starting with a
+    # "." (e.g. .05) are not handled here, but are treated as strings.
+    cdef:
+        bint maybe_number = True
+        int i = 0
+        # deref here is safe since Py_UNICODE* are NULL-terminated
+        Py_UNICODE ch = buf[i]
+
+    if ch == c'-':
+        if length > 1:
+            i += 1
+            ch = buf[i]
+            if ch > c'9' or ch < c'0':
+                maybe_number = False
+        else:
+            maybe_number = False
+    elif ch > c'9' or ch < c'0':
+        maybe_number = False
+
+    if maybe_number:
+        for i in range(i, length):
+            if buf[i] == c'.':
+                return UNQUOTED_FLOAT
+        else:
+            return UNQUOTED_INTEGER
+
+    return UNQUOTED_STRING
 
 
 cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=False):
@@ -258,7 +283,7 @@ cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=False)
         Py_UNICODE ch
         Py_ssize_t length, i
         unicode s
-        bint can_be_number = True
+        UnquotedType kind
 
     while pi.curr < pi.end:
         ch = pi.curr[0]
@@ -271,30 +296,19 @@ cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=False)
         s = PyUnicode_FromUnicode(mark, length)
 
         if not ensure_string and pi.use_numbers:
-            # if it doesn't start with a digit, or a '-' followed by a digit,
-            # then it can't be a number and we keep it as string
-            ch = mark[0]
-            if ch == c'-':
-                if length < 2:
-                    can_be_number = False
-                else:
-                    ch = mark[1]
-                    if ch > c'9' or ch < c'0':
-                        can_be_number = False
-            elif ch > c'9' or ch < c'0':
-                can_be_number = False
-
-            if can_be_number:
-                # if contains a decimal point we try to parse it as a float,
-                # or else as an int; if either fails, we keep is as string.
-                # We don't support scientific notation...
-                try:
-                    for i in range(length):
-                        if mark[i] == c'.':
-                            return float(s)
+            # If it doesn't start with a digit, or a '-' followed by a digit,
+            # then it can't be a number and we keep it as string.
+            # If contains a decimal point, we try to parse it as a float,
+            # otherwise as an int; if either fails, we keep is as string.
+            # We don't support scientific notation...
+            kind = get_unquoted_string_type(mark, length)
+            try:
+                if kind == UNQUOTED_FLOAT:
+                    return float(s)
+                elif kind == UNQUOTED_INTEGER:
                     return int(s)
-                except ValueError:
-                    pass
+            except ValueError:
+                pass
 
         return s
 
