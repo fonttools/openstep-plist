@@ -10,7 +10,14 @@ from cpython.version cimport PY_MAJOR_VERSION
 import array
 cimport cython
 
-from .util cimport tounicode, tostr, unicode_array_template
+from .util cimport (
+    tounicode,
+    tostr,
+    unicode_array_template,
+    is_valid_unquoted_string_char,
+    isdigit,
+    isxdigit,
+)
 
 
 cdef uint32_t line_number_strings(ParseInfo *pi):
@@ -26,20 +33,6 @@ cdef uint32_t line_number_strings(ParseInfo *pi):
             count += 1
         p += 1
     return count
-
-
-cdef inline bint is_valid_unquoted_string_char(Py_UNICODE x):
-    return (
-        (x >= c'a' and x <= c'z') or
-        (x >= c'A' and x <= c'Z') or
-        (x >= c'0' and x <= c'9') or
-        x == c'_' or
-        x == c'$' or
-        x == c'/' or
-        x == c':' or
-        x == c'.' or
-        x == c'-'
-    )
 
 
 cdef bint advance_to_non_space(ParseInfo *pi):

@@ -29,3 +29,17 @@ cdef inline object tostr(s, encoding="ascii", errors="strict"):
 # must convert array type code to native str type else when using
 # unicode literals on py27 one gets 'TypeError: must be char, not unicode'
 cdef array.array unicode_array_template = array.array(tostr('u'), [])
+
+
+cdef inline bint is_valid_unquoted_string_char(Py_UNICODE x):
+    return (
+        (x >= c'a' and x <= c'z') or
+        (x >= c'A' and x <= c'Z') or
+        (x >= c'0' and x <= c'9') or
+        x == c'_' or
+        x == c'$' or
+        x == c'/' or
+        x == c':' or
+        x == c'.' or
+        x == c'-'
+    )
