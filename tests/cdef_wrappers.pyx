@@ -10,7 +10,7 @@ from openstep_plist.parser cimport (
     parse_unquoted_plist_string as _parse_unquoted_plist_string,
     parse_plist_string as _parse_plist_string,
 )
-from openstep_plist._compat cimport tounicode
+from openstep_plist.util cimport tounicode
 from cpython.unicode cimport (
     PyUnicode_FromUnicode, PyUnicode_AS_UNICODE, PyUnicode_GET_SIZE,
 )

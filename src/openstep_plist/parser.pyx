@@ -10,7 +10,7 @@ from cpython.version cimport PY_MAJOR_VERSION
 import array
 cimport cython
 
-from ._compat cimport tounicode, tostr
+from .util cimport tounicode, tostr, unicode_array_template
 
 
 cdef uint32_t line_number_strings(ParseInfo *pi):
@@ -180,11 +180,6 @@ cdef Py_UNICODE get_slashed_char(ParseInfo *pi):
         return c'\n'
 
     return ch
-
-
-# must convert array type code to native str type else when using
-# unicode literals on py27 one gets 'TypeError: must be char, not unicode'
-cdef array.array unicode_array_template = array.array(tostr('u'), [])
 
 
 cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
