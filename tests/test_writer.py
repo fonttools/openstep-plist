@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 import openstep_plist
 from openstep_plist.writer import Writer
@@ -34,6 +35,7 @@ class TestWriter(object):
             ("\x14\x15\x16\x17\x18\x19", '"\\024\\025\\026\\027\\030\\031"'),
             ("\x1a\x1b\x1c\x1d\x1e\x1f\x7f", '"\\032\\033\\034\\035\\036\\037\\177"'),
             ("\x80\x81\x9E\x9F\xA0", '"\\U0080\\U0081\\U009E\\U009F\\U00A0"'),
+            ("\U0001F4A9", '"\\UD83D\\UDCA9"'),  # '💩'
         ],
     )
     def test_quoted_string(self, string, expected):

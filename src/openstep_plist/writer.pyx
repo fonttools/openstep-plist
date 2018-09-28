@@ -9,12 +9,16 @@ from cpython.unicode cimport (
     PyUnicode_GET_SIZE,
 )
 from cpython.object cimport Py_SIZE
+from libc.stdint cimport uint16_t
 cimport cython
 
 from .util cimport (
     unicode_array_template,
     is_valid_unquoted_string_char,
     isprint,
+    PY_NARROW_UNICODE,
+    high_surrogate_from_unicode_scalar,
+    low_surrogate_from_unicode_scalar,
 )
 
 
@@ -24,6 +28,19 @@ cdef inline bint is_valid_unquoted_string(const Py_UNICODE *a, Py_ssize_t length
         if not is_valid_unquoted_string_char(a[i]):
             return False
     return True
+
+
+cdef inline void escape_unicode(uint16_t ch, Py_UNICODE *dest):
+    # caller must ensure 'dest' has rooms for 6 more Py_UNICODE
+    dest[0] = c'\\'
+    dest[1] = c'U'
+    dest[5] = (ch & 15) + 55 if (ch & 15) > 9 else (ch & 15) + 48
+    ch >>= 4
+    dest[4] = (ch & 15) + 55 if (ch & 15) > 9 else (ch & 15) + 48
+    ch >>= 4
+    dest[3] = (ch & 15) + 55 if (ch & 15) > 9 else (ch & 15) + 48
+    ch >>= 4
+    dest[2] = (ch & 15) + 55 if (ch & 15) > 9 else (ch & 15) + 48
 
 
 @cython.final
@@ -90,7 +107,10 @@ cdef class Writer:
                     else:
                         new_length += 4
                 elif unicode_escape:
-                    new_length += 6
+                    if ch > 0xFFFF and not PY_NARROW_UNICODE:
+                        new_length += 12
+                    else:
+                        new_length += 6
                 else:
                     new_length += 1
             curr += 1
@@ -133,18 +153,14 @@ cdef class Writer:
                         ptr[0] = (ch & 7) + c'0'
                         ptr += 3
                 elif unicode_escape:
-                    # doesn't handle characters > BMP with surrogate pairs
-                    ptr[0] = c'\\'
-                    ptr[1] = c'U'
-                    ptr += 2
-                    ptr[3] = (ch & 15) + 55 if (ch & 15) > 9 else (ch & 15) + 48
-                    ch >>= 4
-                    ptr[2] = (ch & 15) + 55 if (ch & 15) > 9 else (ch & 15) + 48
-                    ch >>= 4
-                    ptr[1] = (ch & 15) + 55 if (ch & 15) > 9 else (ch & 15) + 48
-                    ch >>= 4
-                    ptr[0] = (ch & 15) + 55 if (ch & 15) > 9 else (ch & 15) + 48
-                    ptr += 4
+                    if ch > 0xFFFF and not PY_NARROW_UNICODE:
+                        escape_unicode(high_surrogate_from_unicode_scalar(ch), ptr)
+                        ptr += 6
+                        escape_unicode(low_surrogate_from_unicode_scalar(ch), ptr)
+                        ptr += 6
+                    else:
+                        escape_unicode(ch, ptr)
+                        ptr += 6
                 else:
                     ptr[0] = ch
                     ptr += 1
