@@ -51,3 +51,46 @@ class TestWriter(object):
         w = Writer(unicode_escape=False)
         assert w.write("\U0001F4A9") == (3 if sys.maxunicode > 0xFFFF else 4)
         assert w.getvalue() == '"\U0001F4A9"'
+
+    @pytest.mark.parametrize(
+        "integer, expected",
+        [
+            (0, "0"),
+            (1, "1"),
+            (123, "123"),
+            (0x7fffffffffffffff, "9223372036854775807"),
+            (0x7fffffffffffffff+1, "9223372036854775808"),
+        ]
+    )
+    def test_int(self, integer, expected):
+        w = Writer()
+        w.write(integer)
+        assert w.getvalue() == expected
+
+    @pytest.mark.parametrize(
+        "flt, expected",
+        [
+            (0.0, "0"),
+            (1.0, "1"),
+            (123.456, "123.456"),
+            (0.01, "0.01"),
+            (0.001, "0.001"),
+            (0.0001, "0.0001"),
+            (0.00001, "0.00001"),
+            (0.000001, "0.000001"),
+            (0.0000001, "0"),  # default precision is 6
+        ]
+    )
+    def test_float(self, flt, expected):
+        w = Writer()
+        w.write(flt)
+        assert w.getvalue() == expected
+
+    def test_float_precision(self):
+        w = Writer(float_precision=3)
+        w.write(0.0001)
+        assert w.getvalue() == "0"
+
+        w = Writer(float_precision=0)
+        w.write(0.999)
+        assert w.getvalue() == "1"

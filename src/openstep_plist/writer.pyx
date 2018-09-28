@@ -6,6 +6,7 @@ from cpython cimport array
 from cpython.unicode cimport (
     PyUnicode_FromUnicode,
     PyUnicode_AS_UNICODE,
+    PyUnicode_AS_DATA,
     PyUnicode_GET_SIZE,
 )
 from cpython.object cimport Py_SIZE
@@ -48,10 +49,12 @@ cdef class Writer:
 
     cdef public array.array dest
     cdef bint unicode_escape
+    cdef int float_precision
 
-    def __cinit__(self, unicode_escape=True):
+    def __cinit__(self, bint unicode_escape=True, int float_precision=6):
         self.dest = array.clone(unicode_array_template, 0, zero=False)
         self.unicode_escape = unicode_escape
+        self.float_precision = float_precision
 
     def getvalue(self):
         return self._getvalue()
@@ -73,6 +76,13 @@ cdef class Writer:
             return self.write_string("(nil)")
         if isinstance(obj, unicode):
             return self.write_string(obj)
+        elif isinstance(obj, bool):
+            self.dest.append("1" if obj else "0")
+            return 1
+        elif isinstance(obj, float):
+            return self.write_short_float_repr(obj)
+        elif isinstance(obj, (int, long)):
+            return self.write_unquoted_string(unicode(obj))
         else:
             # XXX
             assert 0
@@ -171,6 +181,16 @@ cdef class Writer:
 
         return new_length + 2
 
+    cdef inline Py_ssize_t write_unquoted_string(self, unicode string) except -1:
+        cdef:
+            const char *s = PyUnicode_AS_DATA(string)
+            Py_ssize_t length = PyUnicode_GET_SIZE(string)
+            array.array dest = self.dest
+
+        array.extend_buffer(dest, <char*>s, length)
+        return length
+
+
     cdef Py_ssize_t write_string(self, unicode string) except -1:
         cdef:
             Py_UNICODE *s = PyUnicode_AS_UNICODE(string)
@@ -182,3 +202,25 @@ cdef class Writer:
             return length
         else:
             return self.write_quoted_string(s, length)
+
+    cdef Py_ssize_t write_short_float_repr(self, object py_float) except -1:
+        cdef:
+            array.array dest = self.dest
+            unicode string = f"{py_float:.{self.float_precision}f}"
+            const Py_UNICODE *s = PyUnicode_AS_UNICODE(string)
+            Py_ssize_t length = PyUnicode_GET_SIZE(string)
+            Py_UNICODE ch
+
+        # read digits backwards, skipping all the '0's until either a
+        # non-'0' or '.' is found
+        while length > 0:
+            ch = s[length-1]
+            if ch == c'.':
+                length -= 1  # skip the trailing dot
+                break
+            elif ch != c'0':
+                break
+            length -= 1
+
+        array.extend_buffer(dest, <char*>s, length)
+        return length
