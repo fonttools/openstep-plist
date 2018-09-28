@@ -59,8 +59,8 @@ class TestWriter(object):
             (1, "1"),
             (123, "123"),
             (0x7fffffffffffffff, "9223372036854775807"),
-            (0x7fffffffffffffff+1, "9223372036854775808"),
-        ]
+            (0x7fffffffffffffff + 1, "9223372036854775808"),
+        ],
     )
     def test_int(self, integer, expected):
         w = Writer()
@@ -79,7 +79,7 @@ class TestWriter(object):
             (0.00001, "0.00001"),
             (0.000001, "0.000001"),
             (0.0000001, "0"),  # default precision is 6
-        ]
+        ],
     )
     def test_float(self, flt, expected):
         w = Writer()
@@ -94,3 +94,24 @@ class TestWriter(object):
         w = Writer(float_precision=0)
         w.write(0.999)
         assert w.getvalue() == "1"
+
+    @pytest.mark.parametrize(
+        "data, expected",
+        [
+            (b"\x00", "<00>"),
+            (b"\x00\x01", "<0001>"),
+            (b"\x00\x01\x02", "<000102>"),
+            (b"\x00\x01\x02\x03", "<00010203>"),
+            (b"\x00\x01\x02\x03\x04", "<00010203 04>"),
+            (b"\x00\x01\x02\x03\x04\x05", "<00010203 0405>"),
+            (b"\x00\x01\x02\x03\x04\x05\x06", "<00010203 040506>"),
+            (b"\x00\x01\x02\x03\x04\x05\x06\x07", "<00010203 04050607>"),
+            (b"\x00\x01\x02\x03\x04\x05\x06\x07\x08", "<00010203 04050607 08>"),
+            (b"\x09\x0A\x0B\x0C\x0D\x0E\x0F\x10\x11", "<090A0B0C 0D0E0F10 11>"),
+        ],
+        ids=lambda p: p.decode() if isinstance(p, bytes) else p,
+    )
+    def test_data(self, data, expected):
+        w = Writer()
+        assert w.write(data) == len(expected)
+        assert w.getvalue() == expected

@@ -9,6 +9,7 @@ from cpython.unicode cimport (
     PyUnicode_AS_DATA,
     PyUnicode_GET_SIZE,
 )
+from cpython.bytes cimport PyBytes_GET_SIZE
 from cpython.object cimport Py_SIZE
 from libc.stdint cimport uint16_t
 cimport cython
@@ -21,6 +22,12 @@ from .util cimport (
     high_surrogate_from_unicode_scalar,
     low_surrogate_from_unicode_scalar,
 )
+
+
+cdef Py_UNICODE *HEX_MAP = [
+    c'0', c'1', c'2', c'3', c'4', c'5', c'6', c'7',
+    c'8', c'9', c'A', c'B', c'C', c'D', c'E', c'F',
+]
 
 
 cdef inline bint is_valid_unquoted_string(const Py_UNICODE *a, Py_ssize_t length):
@@ -83,6 +90,8 @@ cdef class Writer:
             return self.write_short_float_repr(obj)
         elif isinstance(obj, (int, long)):
             return self.write_unquoted_string(unicode(obj))
+        elif isinstance(obj, bytes):
+            return self.write_data(obj)
         else:
             # XXX
             assert 0
@@ -224,3 +233,35 @@ cdef class Writer:
 
         array.extend_buffer(dest, <char*>s, length)
         return length
+
+    cdef Py_ssize_t write_data(self, bytes data) except -1:
+        cdef:
+            array.array dest = self.dest
+            const unsigned char *src = data
+            Py_UNICODE *ptr
+            Py_ssize_t length = PyBytes_GET_SIZE(data)
+            Py_ssize_t extra_length, i, j
+
+        # the number includes the opening '<' and closing '>', and the
+        # interleaving spaces between each group of 4 bytes; each byte
+        # is encoded with two hexadecimal digit
+        extra_length = 2 + 2*length + ((length - 1)//4 if length > 4 else 0)
+
+        j = Py_SIZE(dest)
+        array.resize_smart(dest, j + extra_length)
+        ptr = dest.data.as_pyunicodes
+
+        ptr[j] = c'<'
+        j += 1
+        for i in range(length):
+            ptr[j] = HEX_MAP[(src[i] >> 4) & 0x0F]
+            j += 1
+            ptr[j] = HEX_MAP[src[i] & 0x0F]
+            if (i & 3) == 3 and i < length - 1:
+                # if we've just finished a 32-bit int, print a space
+                j += 1
+                ptr[j] = c' '
+            j += 1
+        ptr[j] = c'>'
+
+        return extra_length
