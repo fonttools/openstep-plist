@@ -22,6 +22,11 @@ class TestWriter(object):
         w.write(None)
         assert w.getvalue() == '"(nil)"'
 
+    def test_unquoted_string(self):
+        w = Writer()
+        assert w.write(".appVersion") == 11
+        assert w.getvalue() == ".appVersion"
+
     @pytest.mark.parametrize(
         "string, expected",
         [
@@ -36,6 +41,10 @@ class TestWriter(object):
             ("\x1a\x1b\x1c\x1d\x1e\x1f\x7f", '"\\032\\033\\034\\035\\036\\037\\177"'),
             ("\x80\x81\x9E\x9F\xA0", '"\\U0080\\U0081\\U009E\\U009F\\U00A0"'),
             ("\U0001F4A9", '"\\UD83D\\UDCA9"'),  # '💩'
+            # if string starts with digit, always quote it to distinguish from number
+            ("1", '"1"'),
+            ("1.1", '"1.1"'),
+            ("1zzz", '"1zzz"'),  # ... even if it's not actually a number
         ],
     )
     def test_quoted_string(self, string, expected):

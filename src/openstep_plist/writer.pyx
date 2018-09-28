@@ -17,6 +17,7 @@ cimport cython
 from .util cimport (
     unicode_array_template,
     is_valid_unquoted_string_char,
+    isdigit,
     isprint,
     PY_NARROW_UNICODE,
     high_surrogate_from_unicode_scalar,
@@ -32,6 +33,13 @@ cdef Py_UNICODE *HEX_MAP = [
 
 cdef inline bint is_valid_unquoted_string(const Py_UNICODE *a, Py_ssize_t length):
     cdef Py_ssize_t i
+
+    # if string starts with digit, always write it within quotes
+    # to distinguish it from an actual integer or float number,
+    # which are always written without quotes
+    if isdigit(a[0]):
+        return False
+
     for i in range(length):
         if not is_valid_unquoted_string_char(a[i]):
             return False
