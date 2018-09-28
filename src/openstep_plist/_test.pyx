@@ -10,6 +10,7 @@ from .parser cimport (
     parse_plist_string as _parse_plist_string,
 )
 from .util cimport (
+    PY_NARROW_UNICODE,
     tounicode,
     is_valid_unquoted_string_char as _is_valid_unquoted_string_char,
 )
@@ -45,6 +46,10 @@ cdef class ParseContext:
             use_numbers=use_numbers,
         )
         return self
+
+
+def is_narrow_unicode():
+    return PY_NARROW_UNICODE
 
 
 def is_valid_unquoted_string_char(Py_UNICODE c):

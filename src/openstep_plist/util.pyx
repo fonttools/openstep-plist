@@ -47,7 +47,7 @@ cdef inline bint is_valid_unquoted_string_char(Py_UNICODE x):
     )
 
 
-cdef bint PY_NARROW_UNICODE = sys.maxunicode < 0x10FFFF
+cdef bint PY_NARROW_UNICODE = sizeof(Py_UNICODE) != 4
 
 
 cdef inline bint is_high_surrogate(uint32_t ch):

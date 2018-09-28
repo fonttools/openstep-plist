@@ -2,6 +2,7 @@
 from __future__ import absolute_import, unicode_literals
 import openstep_plist
 from openstep_plist.writer import Writer
+from openstep_plist._test import is_narrow_unicode
 from io import StringIO
 import sys
 import pytest
@@ -58,7 +59,7 @@ class TestWriter(object):
         assert w.getvalue() == '"\u0410"'
 
         w = Writer(unicode_escape=False)
-        assert w.write("\U0001F4A9") == (3 if sys.maxunicode > 0xFFFF else 4)
+        assert w.write("\U0001F4A9") == (4 if is_narrow_unicode() else 3)
         assert w.getvalue() == '"\U0001F4A9"'
 
     @pytest.mark.parametrize(
