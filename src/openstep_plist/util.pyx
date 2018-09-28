@@ -3,7 +3,9 @@
 
 from cpython.version cimport PY_MAJOR_VERSION
 from cpython cimport array
+from libc.stdint cimport uint16_t, uint32_t
 import array
+import sys
 
 
 cdef inline unicode tounicode(s, encoding="ascii", errors="strict"):
@@ -43,3 +45,26 @@ cdef inline bint is_valid_unquoted_string_char(Py_UNICODE x):
         x == c'.' or
         x == c'-'
     )
+
+
+cdef bint PY_NARROW_UNICODE = sys.maxunicode < 0x10FFFF
+
+
+cdef inline bint is_high_surrogate(uint32_t ch):
+    return ch >= 0xD800 and ch <= 0xDBFF
+
+
+cdef inline bint is_low_surrogate(uint32_t ch):
+    return ch >= 0xDC00 and ch <= 0xDFFF
+
+
+cdef inline uint32_t unicode_scalar_from_surrogates(uint16_t high, uint16_t low):
+    return (high - 0xD800) * 0x400 + low - 0xDC00 + 0x10000
+
+
+cdef inline uint16_t high_surrogate_from_unicode_scalar(uint32_t scalar):
+    return ((scalar - 0x10000) // 0x400) + 0xD800
+
+
+cdef inline uint16_t low_surrogate_from_unicode_scalar(uint32_t scalar):
+    return (scalar - 0x10000) % 0x400 + 0xDC00

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 import sys
 from io import StringIO, BytesIO
@@ -133,7 +134,19 @@ def test_parse_unquoted_plist_string_EOF():
 
 @pytest.mark.parametrize(
     "string, expected",
-    [("a", "a"), ('"a"', "a"), ("'a'", "a"), ('"a\\012b"', ("a\nb"))],
+    [
+        ("a", "a"),
+        ('"a"', "a"),
+        ("'a'", "a"),
+        ('"a\\012b"', ("a\nb")),
+        # surrogate pair gets decoded as a single scalar value
+        ('"\\UD83D\\UDCA9"', "\U0001F4A9"),  # '💩'
+        # surrogate that don't go in pairs are simply passed through
+        ('"\\UD83D"', "\ud83d"),
+        ('"\\UD83D\\012"', "\ud83d\n"),
+        ('"\\UDCA9"', "\udca9"),
+        ('"\\UDCA9\\012"', "\udca9\n"),
+    ],
 )
 def test_parse_plist_string(string, expected):
     assert parse_plist_string(string) == expected

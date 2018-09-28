@@ -4,7 +4,7 @@
 from cpython.unicode cimport (
     PyUnicode_FromUnicode, PyUnicode_AS_UNICODE, PyUnicode_GET_SIZE,
 )
-from libc.stdint cimport uint8_t, uint32_t
+from libc.stdint cimport uint8_t, uint16_t, uint32_t
 from cpython cimport array
 from cpython.version cimport PY_MAJOR_VERSION
 import array
@@ -17,6 +17,10 @@ from .util cimport (
     is_valid_unquoted_string_char,
     isdigit,
     isxdigit,
+    PY_NARROW_UNICODE,
+    is_high_surrogate,
+    is_low_surrogate,
+    unicode_scalar_from_surrogates,
 )
 
 
@@ -179,7 +183,8 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
     cdef array.array string = array.clone(unicode_array_template, 0, zero=False)
     cdef const Py_UNICODE *start_mark = pi.curr
     cdef const Py_UNICODE *mark = pi.curr
-    cdef Py_UNICODE ch
+    cdef const Py_UNICODE *tmp
+    cdef Py_UNICODE ch, ch2
     while pi.curr < pi.end:
         ch = pi.curr[0]
         if ch == quote:
@@ -188,6 +193,24 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
             array.extend_buffer(string, <char*>mark, pi.curr - mark)
             pi.curr += 1
             ch = get_slashed_char(pi)
+            # If we are NOT on a "narrow" python 2 build, then we need to parse
+            # two successive \UXXXX escape sequences as one surrogate pair
+            # representing a "supplementary" Unicode scalar value.
+            # If we are on a "narrow" build, then the two code units already
+            # represent a single codepoint internally.
+            if (
+                not PY_NARROW_UNICODE and is_high_surrogate(ch)
+                and pi.curr < pi.end and pi.curr[0] == c"\\"
+            ):
+                tmp = pi.curr
+                pi.curr += 1
+                ch2 = get_slashed_char(pi)
+                if is_low_surrogate(ch2):
+                    ch = unicode_scalar_from_surrogates(high=ch, low=ch2)
+                else:
+                    # XXX maybe we should raise here instead of letting this
+                    # lone high surrogate (not followed by a low) pass through?
+                    pi.curr = tmp
             string.append(ch)
             mark = pi.curr
         else:
