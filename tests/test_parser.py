@@ -3,7 +3,7 @@ from __future__ import absolute_import, unicode_literals
 import sys
 from io import StringIO, BytesIO
 from collections import OrderedDict
-from .cdef_wrappers import (
+from openstep_plist._test import (
     line_number_strings,
     is_valid_unquoted_string_char,
     advance_to_non_space,

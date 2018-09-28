@@ -1,7 +1,7 @@
 #cython: language_level=3
 #distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
-from openstep_plist.parser cimport (
+from .parser cimport (
     ParseInfo,
     line_number_strings as _line_number_strings,
     advance_to_non_space as _advance_to_non_space,
@@ -9,7 +9,7 @@ from openstep_plist.parser cimport (
     parse_unquoted_plist_string as _parse_unquoted_plist_string,
     parse_plist_string as _parse_plist_string,
 )
-from openstep_plist.util cimport (
+from .util cimport (
     tounicode,
     is_valid_unquoted_string_char as _is_valid_unquoted_string_char,
 )
