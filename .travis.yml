@@ -2,6 +2,7 @@ env:
   global:
     # directory containing the project source
     - REPO_DIR=.
+    - BUILD_DEPENDS="wheel==0.31.1"
     # pip dependencies to _test_ project
     - TEST_DEPENDS="tox wheel==0.31.1"
     - PLAT=x86_64
