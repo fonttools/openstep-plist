@@ -45,7 +45,9 @@ class TestWriter(object):
             # if string starts with digit, always quote it to distinguish from number
             ("1", '"1"'),
             ("1.1", '"1.1"'),
+            ("-23", '"-23"'),
             ("1zzz", '"1zzz"'),  # ... even if it's not actually a number
+            ("-23yyy", '"-23yyy"'),
         ],
     )
     def test_quoted_string(self, string, expected):
