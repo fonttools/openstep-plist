@@ -3,7 +3,7 @@ env:
     # directory containing the project source
     - REPO_DIR=.
     # pip dependencies to _test_ project
-    - TEST_DEPENDS="tox"
+    - TEST_DEPENDS="tox wheel==0.31.1"
     - PLAT=x86_64
     - UNICODE_WIDTH=32
     - TWINE_USERNAME="anthrotype"
