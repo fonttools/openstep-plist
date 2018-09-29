@@ -125,3 +125,41 @@ class TestWriter(object):
         w = Writer()
         assert w.write(data) == len(expected)
         assert w.getvalue() == expected
+
+    @pytest.mark.parametrize(
+        "array, expected",
+        [
+            ([1], "(1)"),
+            ([1, 2], "(1, 2)"),
+            ([1.2, 3.4, 5.6], "(1.2, 3.4, 5.6)"),
+            ((1, "a", ("b", 2)), "(1, a, (b, 2))"),
+            ([b"a", b"b"], "(<61>, <62>)"),
+            ([{"a": "b"}, {"c": "d"}], "({a = b;}, {c = d;})"),
+        ],
+    )
+    def test_array(self, array, expected):
+        w = Writer()
+        assert w.write(array) == len(expected)
+        assert w.getvalue() == expected
+
+    @pytest.mark.parametrize(
+        "dictionary, expected",
+        [
+            ({"a": "b"}, "{a = b;}"),
+            ({1: "c"}, '{"1" = c;}'),
+            (
+                {"hello world": 12, "abc": [34, 56.8]},
+                '{abc = (34, 56.8); "hello world" = 12;}',
+            ),
+        ],
+    )
+    def test_dictionary(self, dictionary, expected):
+        w = Writer()
+        assert w.write(dictionary) == len(expected)
+        assert w.getvalue() == expected
+
+    def test_type_error(self):
+        obj = object()
+        w = Writer()
+        with pytest.raises(TypeError, match="not PLIST serializable"):
+            w.write(obj)

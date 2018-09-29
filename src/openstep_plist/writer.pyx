@@ -29,6 +29,10 @@ cdef Py_UNICODE *HEX_MAP = [
     c'8', c'9', c'A', c'B', c'C', c'D', c'E', c'F',
 ]
 
+cdef Py_UNICODE *ARRAY_SEP_NO_INDENT = [c',', c' ']
+cdef Py_UNICODE *DICT_KEY_VALUE_SEP = [c' ', c'=', c' ']
+cdef Py_UNICODE *DICT_ITEM_SEP_NO_INDENT = [c';', c' ']
+
 
 cdef inline bint is_valid_unquoted_string(const Py_UNICODE *a, Py_ssize_t length):
     cdef Py_ssize_t i
@@ -97,11 +101,18 @@ cdef class Writer:
             return self.write_short_float_repr(obj)
         elif isinstance(obj, (int, long)):
             return self.write_unquoted_string(unicode(obj))
+        elif isinstance(obj, list):
+            return self.write_array_from_list(obj)
+        elif isinstance(obj, tuple):
+            return self.write_array_from_tuple(obj)
+        elif isinstance(obj, dict):
+            return self.write_dict(obj)
         elif isinstance(obj, bytes):
             return self.write_data(obj)
         else:
-            # XXX
-            assert 0
+            raise TypeError(
+                f"Object of type {type(obj).__name__} is not PLIST serializable"
+            )
 
     cdef Py_ssize_t write_quoted_string(
         self, const Py_UNICODE *s, Py_ssize_t length
@@ -272,3 +283,86 @@ cdef class Writer:
         ptr[j] = c'>'
 
         return extra_length
+
+    # XXX The two write_array_* methods are identical apart from the type of
+    # the 'seq' (one is list, the other is tuple). I tried using fused type
+    # ``'list_or_tuple' to avoid duplication but I couldn't make it work...
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cdef Py_ssize_t write_array_from_list(self, list seq) except -1:
+        cdef:
+            Py_ssize_t length = len(seq)
+            Py_ssize_t last = length - 1
+            Py_ssize_t count
+            Py_ssize_t i
+            array.array dest = self.dest
+
+        dest.append("(")
+        count = 1
+
+        for i in range(length):
+            count += self.write_object(seq[i])
+            if i != last:
+                array.extend_buffer(dest, <char*>ARRAY_SEP_NO_INDENT, 2)
+                count += 2
+
+        dest.append(")")
+        count += 1
+
+        return count
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cdef Py_ssize_t write_array_from_tuple(self, tuple seq) except -1:
+        cdef:
+            Py_ssize_t length = len(seq)
+            Py_ssize_t last = length - 1
+            Py_ssize_t count
+            Py_ssize_t i
+            array.array dest = self.dest
+
+        dest.append("(")
+        count = 1
+
+        for i in range(length):
+            count += self.write_object(seq[i])
+            if i != last:
+                array.extend_buffer(dest, <char*>ARRAY_SEP_NO_INDENT, 2)
+                count += 2
+
+        dest.append(")")
+        count += 1
+
+        return count
+
+    cdef Py_ssize_t write_dict(self, dict d) except -1:
+        cdef:
+            array.array dest = self.dest
+            Py_ssize_t last = len(d) - 1
+            Py_ssize_t count
+
+        dest.append("{")
+        count = 1
+
+        for i, (key, value) in enumerate(sorted(d.items())):
+            if not isinstance(key, unicode):
+                key = unicode(key)
+            count += self.write_string(key)
+
+            array.extend_buffer(dest, <char*>DICT_KEY_VALUE_SEP, 3)
+            count += 3
+
+            count += self.write_object(value)
+
+            if i != last:
+                array.extend_buffer(dest, <char*>DICT_ITEM_SEP_NO_INDENT, 2)
+                count += 2
+            else:
+                dest.append(";")
+                count += 1
+
+        dest.append("}")
+        count += 1
+
+        return count
