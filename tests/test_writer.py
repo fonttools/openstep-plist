@@ -163,3 +163,18 @@ class TestWriter(object):
         w = Writer()
         with pytest.raises(TypeError, match="not PLIST serializable"):
             w.write(obj)
+
+
+def test_dumps():
+    assert openstep_plist.dumps(
+        {"a": 1, "b": 2.9999999, "c d": [33, 44], "e": (b"fghilmno", b"pqrstuvz")}
+    ) == (
+        '{a = 1; b = 3; "c d" = (33, 44); '
+        "e = (<66676869 6C6D6E6F>, <70717273 7475767A>);}"
+    )
+
+
+def test_dump():
+    fp = StringIO()
+    openstep_plist.dump([1, b"2", {3: (4, "5")}], fp)
+    assert fp.getvalue() == '(1, <32>, {"3" = (4, "5");})'

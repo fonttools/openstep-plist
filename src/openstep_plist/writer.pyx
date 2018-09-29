@@ -366,3 +366,15 @@ cdef class Writer:
         count += 1
 
         return count
+
+
+def dumps(obj, bint unicode_escape=True, int float_precision=6):
+    w = Writer(unicode_escape=unicode_escape, float_precision=float_precision)
+    w.write(obj)
+    return w.getvalue()
+
+
+def dump(obj, fp, bint unicode_escape=True, int float_precision=6):
+    w = Writer(unicode_escape=unicode_escape, float_precision=float_precision)
+    w.write(obj)
+    w.dump(fp)
