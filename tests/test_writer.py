@@ -4,7 +4,7 @@ import openstep_plist
 from openstep_plist.writer import Writer
 from openstep_plist._test import is_narrow_unicode
 from io import StringIO, BytesIO
-import sys
+from collections import OrderedDict
 import pytest
 
 
@@ -158,7 +158,7 @@ class TestWriter(object):
                 [{"a": "b"}, {"c": "d"}],
                 "({a = b;}, {c = d;})",
                 "(\n  {\n    a = b;\n  },\n  {\n    c = d;\n  }\n)",
-            )
+            ),
         ],
     )
     def test_array(self, array, expected_no_indent, expected_indent):
@@ -174,12 +174,18 @@ class TestWriter(object):
         "dictionary, expected_no_indent, expected_indent",
         [
             ({}, "{}", "{}"),
+            (OrderedDict(), "{}", "{}"),
             ({"a": "b"}, "{a = b;}", "{\n  a = b;\n}"),
             ({1: "c"}, '{"1" = c;}', '{\n  "1" = c;\n}'),
             (
                 {"hello world": 12, "abc": [34, 56.8]},
                 '{abc = (34, 56.8); "hello world" = 12;}',
                 '{\n  abc = (\n    34,\n    56.8\n  );\n  "hello world" = 12;\n}',
+            ),
+            (
+                OrderedDict([("z", 2), ("a", 1), (12, "c")]),
+                '{z = 2; a = 1; "12" = c;}',
+                '{\n  z = 2;\n  a = 1;\n  "12" = c;\n}',
             ),
         ],
     )
