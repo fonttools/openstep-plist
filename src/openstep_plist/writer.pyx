@@ -8,6 +8,7 @@ from cpython.unicode cimport (
     PyUnicode_AS_UNICODE,
     PyUnicode_AS_DATA,
     PyUnicode_GET_SIZE,
+    PyUnicode_AsUTF8String,
 )
 from cpython.bytes cimport PyBytes_GET_SIZE
 from cpython.object cimport Py_SIZE
@@ -78,9 +79,17 @@ cdef class Writer:
         return self._getvalue()
 
     def dump(self, file):
-        # TODO encode to UTF-8 if binary file
         cdef unicode s = self._getvalue()
-        file.write(s)
+        # figure out whether file object expects bytes or unicodes
+        try:
+            file.write(b"")
+        except TypeError:
+            file.write("")  # this better not fail...
+            # file already accepts unicodes; use it directly
+            file.write(s)
+        else:
+            # file expects bytes; always encode as UTF-8
+            file.write(PyUnicode_AsUTF8String(s))
 
     def write(self, object obj):
         return self.write_object(obj)

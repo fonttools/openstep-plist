@@ -3,7 +3,7 @@ from __future__ import absolute_import, unicode_literals
 import openstep_plist
 from openstep_plist.writer import Writer
 from openstep_plist._test import is_narrow_unicode
-from io import StringIO
+from io import StringIO, BytesIO
 import sys
 import pytest
 
@@ -180,6 +180,14 @@ def test_dumps():
 
 
 def test_dump():
+    plist = [1, b"2", {3: (4, "5", "\U0001F4A9")}]
     fp = StringIO()
-    openstep_plist.dump([1, b"2", {3: (4, "5")}], fp)
-    assert fp.getvalue() == '(1, <32>, {"3" = (4, "5");})'
+    openstep_plist.dump(plist, fp)
+    assert fp.getvalue() == '(1, <32>, {"3" = (4, "5", "\\UD83D\\UDCA9");})'
+
+    fp = BytesIO()
+    openstep_plist.dump(plist, fp, unicode_escape=False)
+    assert fp.getvalue() == b'(1, <32>, {"3" = (4, "5", "\xf0\x9f\x92\xa9");})'
+
+    with pytest.raises(AttributeError):
+        openstep_plist.dump(plist, object())
