@@ -153,11 +153,11 @@ cdef class Writer:
 
         while curr < end:
             ch = curr[0]
-            if ch == c'\n' or ch == c'\t' or ch == c'\r':
+            if ch == c'\t':
                 new_length += 1
             elif (
-                ch == c'\a' or ch == c'\b' or ch == c'\v' or ch == c'\f'
-                or ch == c'\\' or ch == c'"'
+                ch == c'\n' or ch == c'\\' or ch == c'"' or ch == c'\a'
+                or ch == c'\b' or ch == c'\v' or ch == c'\f' or ch == c'\r'
             ):
                 new_length += 2
             else:
@@ -183,9 +183,11 @@ cdef class Writer:
         curr = s
         while curr < end:
             ch = curr[0]
-            if ch == c'\n' or ch == c'\t' or ch == c'\r':
+            if ch == c'\t':
                 ptr[0] = ch
                 ptr += 1
+            elif ch == c'\n':
+                ptr[0] = c'\\'; ptr[1] = c'n'; ptr += 2
             elif ch == c'\a':
                 ptr[0] = c'\\'; ptr[1] = c'a'; ptr += 2
             elif ch == c'\b':
@@ -198,6 +200,8 @@ cdef class Writer:
                 ptr[0] = c'\\'; ptr[1] = c'\\'; ptr += 2
             elif ch == c'"':
                 ptr[0] = c'\\'; ptr[1] = c'"'; ptr += 2
+            elif ch == c'\r':
+                ptr[0] = c'\\'; ptr[1] = c'r'; ptr += 2
             else:
                 if ch < 128:
                     if isprint(ch) or ch == c' ':
