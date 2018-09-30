@@ -131,6 +131,15 @@ class TestWriter(object):
         assert w.write(data) == len(expected)
         assert w.getvalue() == expected
 
+    def test_bool(self):
+        w = Writer()
+        assert w.write(True) == 1
+        assert w.getvalue() == "1"
+
+        w = Writer()
+        assert w.write(False) == 1
+        assert w.getvalue() == "0"
+
     @pytest.mark.parametrize(
         "array, expected_no_indent, expected_indent",
         [
