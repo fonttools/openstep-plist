@@ -530,7 +530,7 @@ cdef object parse_plist_object(ParseInfo *pi, bint required=True):
             )
 
 
-def loads(string, dict_type=dict, bint use_numbers=False):
+def loads(string, dict_type=dict, bint use_numbers=True):
     cdef unicode s = tounicode(string)
     cdef Py_ssize_t length = PyUnicode_GET_SIZE(s)
     cdef Py_UNICODE* buf = PyUnicode_AS_UNICODE(s)
@@ -566,5 +566,5 @@ def loads(string, dict_type=dict, bint use_numbers=False):
     return result
 
 
-def load(fp, dict_type=dict, use_numbers=False):
+def load(fp, dict_type=dict, use_numbers=True):
     return loads(fp.read(), dict_type=dict_type, use_numbers=use_numbers)
