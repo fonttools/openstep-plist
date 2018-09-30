@@ -2,6 +2,7 @@
 #distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
 import array
+from collections import OrderedDict
 from cpython cimport array
 from cpython.unicode cimport (
     PyUnicode_FromUnicode,
@@ -128,6 +129,8 @@ cdef class Writer:
             return self.write_array_from_list(obj)
         elif isinstance(obj, tuple):
             return self.write_array_from_tuple(obj)
+        elif isinstance(obj, OrderedDict):
+            return self.write_ordered_dict(obj)
         elif isinstance(obj, dict):
             return self.write_dict(obj)
         elif isinstance(obj, bytes):
@@ -450,6 +453,72 @@ cdef class Writer:
 
         last = len(d) - 1
         for i, (key, value) in enumerate(sorted(d.items())):
+            if not isinstance(key, unicode):
+                key = unicode(key)
+            count += self.write_string(key)
+
+            array.extend_buffer(dest, <char*>DICT_KEY_VALUE_SEP, 3)
+            count += 3
+
+            count += self.write_object(value)
+
+            if i != last:
+                if indent is None:
+                    array.extend_buffer(dest, <char*>DICT_ITEM_SEP_NO_INDENT, 2)
+                    count += 2
+                else:
+                    dest.append(';')
+                    array.extend_buffer(dest, <char*>indent_chars, indent_length)
+                    count += 1 + indent_length
+            else:
+                dest.append(';')
+                count += 1
+
+        if indent is not None:
+            self.current_indent_level -= 1
+            newline_indent = '\n' + self.current_indent_level * indent
+            indent_length = PyUnicode_GET_SIZE(newline_indent)
+            indent_chars = PyUnicode_AS_DATA(newline_indent)
+            array.extend_buffer(dest, <char*>indent_chars, indent_length)
+            count += indent_length
+
+        dest.append('}')
+        count += 1
+
+        return count
+
+    cdef Py_ssize_t write_ordered_dict(self, object d) except -1:
+        # This is the same as the write_dict method but doesn't sort the items.
+        # Also, in `write_dict`, the type of `d` is `dict` so it uses optimized
+        # C dict methods, whereas here is generic `object`, as OrderedDict does
+        # not have a C API (as far as I know).
+        cdef:
+            unicode indent
+            unicode newline_indent
+            const char *indent_chars = NULL
+            Py_ssize_t indent_length = 0
+            array.array dest = self.dest
+            Py_ssize_t last, count, i
+
+        if not d:
+            dest.extend("{}")
+            return 2
+
+        dest.append('{')
+        count = 1
+
+        indent = self.indent
+        if indent is not None:
+            self.current_indent_level += 1
+            newline_indent = '\n' + self.current_indent_level * indent
+            indent_length = PyUnicode_GET_SIZE(newline_indent)
+            indent_chars = PyUnicode_AS_DATA(newline_indent)
+            array.extend_buffer(dest, <char*>indent_chars, indent_length)
+            count += indent_length
+
+        last = len(d) - 1
+        # we don't sort OrderedDict
+        for i, (key, value) in enumerate(d.items()):
             if not isinstance(key, unicode):
                 key = unicode(key)
             count += self.write_string(key)
