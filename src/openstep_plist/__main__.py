@@ -3,6 +3,7 @@
 import openstep_plist
 import json
 import binascii
+from functools import partial
 # from collections import OrderedDict
 
 
@@ -28,7 +29,7 @@ def main(args=None):
     method = args[0]
     if method == "-a":
         parse = openstep_plist.load
-        dump = openstep_plist.dump
+        dump = partial(openstep_plist.dump, indent=2)
 
     elif method == "-g":
 
