@@ -1,16 +1,19 @@
 #cython: language_level=3
 #distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
-from openstep_plist.parser cimport (
+from .parser cimport (
     ParseInfo,
     line_number_strings as _line_number_strings,
-    is_valid_unquoted_string_char as _is_valid_unquoted_string_char,
     advance_to_non_space as _advance_to_non_space,
     get_slashed_char as _get_slashed_char,
     parse_unquoted_plist_string as _parse_unquoted_plist_string,
     parse_plist_string as _parse_plist_string,
 )
-from openstep_plist._compat cimport tounicode
+from .util cimport (
+    PY_NARROW_UNICODE,
+    tounicode,
+    is_valid_unquoted_string_char as _is_valid_unquoted_string_char,
+)
 from cpython.unicode cimport (
     PyUnicode_FromUnicode, PyUnicode_AS_UNICODE, PyUnicode_GET_SIZE,
 )
@@ -28,7 +31,7 @@ cdef class ParseContext:
             string,
             Py_ssize_t offset=0,
             dict_type=dict,
-            bint use_numbers=False
+            bint use_numbers=True
     ):
         cdef ParseContext self = ParseContext.__new__(cls)
         self.s = tounicode(string)
@@ -43,6 +46,10 @@ cdef class ParseContext:
             use_numbers=use_numbers,
         )
         return self
+
+
+def is_narrow_unicode():
+    return PY_NARROW_UNICODE
 
 
 def is_valid_unquoted_string_char(Py_UNICODE c):

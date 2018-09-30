@@ -98,7 +98,7 @@ include_dirs = (
     else []
 )
 
-cython_modules = ["parser", "_compat"]
+cython_modules = ["parser", "util", "writer", "_test"]
 extensions = [
     Extension(
         "openstep_plist." + mod,

@@ -4,11 +4,6 @@ from libc.stdint cimport uint32_t
 from cpython cimport array
 
 
-cdef extern from "<ctype.h>":
-    int isxdigit(int c)
-    int isdigit(int c)
-
-
 ctypedef struct ParseInfo:
     const Py_UNICODE *begin
     const Py_UNICODE *curr
@@ -22,9 +17,6 @@ cdef class ParseError(Exception):
 
 
 cdef uint32_t line_number_strings(ParseInfo *pi)
-
-
-cdef bint is_valid_unquoted_string_char(Py_UNICODE x)
 
 
 cdef bint advance_to_non_space(ParseInfo *pi)

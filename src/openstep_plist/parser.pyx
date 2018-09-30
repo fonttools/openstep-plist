@@ -4,13 +4,24 @@
 from cpython.unicode cimport (
     PyUnicode_FromUnicode, PyUnicode_AS_UNICODE, PyUnicode_GET_SIZE,
 )
-from libc.stdint cimport uint8_t, uint32_t
+from libc.stdint cimport uint8_t, uint16_t, uint32_t
 from cpython cimport array
 from cpython.version cimport PY_MAJOR_VERSION
 import array
 cimport cython
 
-from ._compat cimport tounicode, tostr
+from .util cimport (
+    tounicode,
+    tostr,
+    unicode_array_template,
+    is_valid_unquoted_string_char,
+    isdigit,
+    isxdigit,
+    PY_NARROW_UNICODE,
+    is_high_surrogate,
+    is_low_surrogate,
+    unicode_scalar_from_surrogates,
+)
 
 
 cdef uint32_t line_number_strings(ParseInfo *pi):
@@ -26,20 +37,6 @@ cdef uint32_t line_number_strings(ParseInfo *pi):
             count += 1
         p += 1
     return count
-
-
-cdef inline bint is_valid_unquoted_string_char(Py_UNICODE x):
-    return (
-        (x >= c'a' and x <= c'z') or
-        (x >= c'A' and x <= c'Z') or
-        (x >= c'0' and x <= c'9') or
-        x == c'_' or
-        x == c'$' or
-        x == c'/' or
-        x == c':' or
-        x == c'.' or
-        x == c'-'
-    )
 
 
 cdef bint advance_to_non_space(ParseInfo *pi):
@@ -182,16 +179,12 @@ cdef Py_UNICODE get_slashed_char(ParseInfo *pi):
     return ch
 
 
-# must convert array type code to native str type else when using
-# unicode literals on py27 one gets 'TypeError: must be char, not unicode'
-cdef array.array unicode_array_template = array.array(tostr('u'), [])
-
-
 cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
     cdef array.array string = array.clone(unicode_array_template, 0, zero=False)
     cdef const Py_UNICODE *start_mark = pi.curr
     cdef const Py_UNICODE *mark = pi.curr
-    cdef Py_UNICODE ch
+    cdef const Py_UNICODE *tmp
+    cdef Py_UNICODE ch, ch2
     while pi.curr < pi.end:
         ch = pi.curr[0]
         if ch == quote:
@@ -200,6 +193,24 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
             array.extend_buffer(string, <char*>mark, pi.curr - mark)
             pi.curr += 1
             ch = get_slashed_char(pi)
+            # If we are NOT on a "narrow" python 2 build, then we need to parse
+            # two successive \UXXXX escape sequences as one surrogate pair
+            # representing a "supplementary" Unicode scalar value.
+            # If we are on a "narrow" build, then the two code units already
+            # represent a single codepoint internally.
+            if (
+                not PY_NARROW_UNICODE and is_high_surrogate(ch)
+                and pi.curr < pi.end and pi.curr[0] == c"\\"
+            ):
+                tmp = pi.curr
+                pi.curr += 1
+                ch2 = get_slashed_char(pi)
+                if is_low_surrogate(ch2):
+                    ch = unicode_scalar_from_surrogates(high=ch, low=ch2)
+                else:
+                    # XXX maybe we should raise here instead of letting this
+                    # lone high surrogate (not followed by a low) pass through?
+                    pi.curr = tmp
             string.append(ch)
             mark = pi.curr
         else:
@@ -519,7 +530,7 @@ cdef object parse_plist_object(ParseInfo *pi, bint required=True):
             )
 
 
-def loads(string, dict_type=dict, bint use_numbers=False):
+def loads(string, dict_type=dict, bint use_numbers=True):
     cdef unicode s = tounicode(string)
     cdef Py_ssize_t length = PyUnicode_GET_SIZE(s)
     cdef Py_UNICODE* buf = PyUnicode_AS_UNICODE(s)
@@ -555,5 +566,5 @@ def loads(string, dict_type=dict, bint use_numbers=False):
     return result
 
 
-def load(fp, dict_type=dict, use_numbers=False):
+def load(fp, dict_type=dict, use_numbers=True):
     return loads(fp.read(), dict_type=dict_type, use_numbers=use_numbers)
