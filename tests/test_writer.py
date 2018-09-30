@@ -132,36 +132,56 @@ class TestWriter(object):
         assert w.getvalue() == expected
 
     @pytest.mark.parametrize(
-        "array, expected",
+        "array, expected_no_indent, expected_indent",
         [
-            ([1], "(1)"),
-            ([1, 2], "(1, 2)"),
-            ([1.2, 3.4, 5.6], "(1.2, 3.4, 5.6)"),
-            ((1, "a", ("b", 2)), "(1, a, (b, 2))"),
-            ([b"a", b"b"], "(<61>, <62>)"),
-            ([{"a": "b"}, {"c": "d"}], "({a = b;}, {c = d;})"),
+            ([], "()", "()"),
+            ((), "()", "()"),
+            ([1], "(1)", "(\n  1\n)"),
+            ([1, 2], "(1, 2)", "(\n  1,\n  2\n)"),
+            ([1.2, 3.4, 5.6], "(1.2, 3.4, 5.6)", "(\n  1.2,\n  3.4,\n  5.6\n)"),
+            (
+                (1, "a", ("b", 2)),
+                "(1, a, (b, 2))",
+                "(\n  1,\n  a,\n  (\n    b,\n    2\n  )\n)",
+            ),
+            ([b"a", b"b"], "(<61>, <62>)", "(\n  <61>,\n  <62>\n)"),
+            (
+                [{"a": "b"}, {"c": "d"}],
+                "({a = b;}, {c = d;})",
+                "(\n  {\n    a = b;\n  },\n  {\n    c = d;\n  }\n)",
+            )
         ],
     )
-    def test_array(self, array, expected):
+    def test_array(self, array, expected_no_indent, expected_indent):
         w = Writer()
-        assert w.write(array) == len(expected)
-        assert w.getvalue() == expected
+        assert w.write(array) == len(expected_no_indent)
+        assert w.getvalue() == expected_no_indent
+
+        w = Writer(indent=2)
+        assert w.write(array) == len(expected_indent)
+        assert w.getvalue() == expected_indent
 
     @pytest.mark.parametrize(
-        "dictionary, expected",
+        "dictionary, expected_no_indent, expected_indent",
         [
-            ({"a": "b"}, "{a = b;}"),
-            ({1: "c"}, '{"1" = c;}'),
+            ({}, "{}", "{}"),
+            ({"a": "b"}, "{a = b;}", "{\n  a = b;\n}"),
+            ({1: "c"}, '{"1" = c;}', '{\n  "1" = c;\n}'),
             (
                 {"hello world": 12, "abc": [34, 56.8]},
                 '{abc = (34, 56.8); "hello world" = 12;}',
+                '{\n  abc = (\n    34,\n    56.8\n  );\n  "hello world" = 12;\n}',
             ),
         ],
     )
-    def test_dictionary(self, dictionary, expected):
+    def test_dictionary(self, dictionary, expected_no_indent, expected_indent):
         w = Writer()
-        assert w.write(dictionary) == len(expected)
-        assert w.getvalue() == expected
+        assert w.write(dictionary) == len(expected_no_indent)
+        assert w.getvalue() == expected_no_indent
+
+        w = Writer(indent="  ")
+        assert w.write(dictionary) == len(expected_indent)
+        assert w.getvalue() == expected_indent
 
     def test_type_error(self):
         obj = object()
