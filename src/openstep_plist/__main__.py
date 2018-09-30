@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-
+from __future__ import absolute_import, unicode_literals
 import openstep_plist
 import json
 import binascii
 from functools import partial
-# from collections import OrderedDict
+from io import open
 
 
 class BytesEncoder(json.JSONEncoder):
@@ -29,7 +29,7 @@ def main(args=None):
     method = args[0]
     if method == "-a":
         parse = openstep_plist.load
-        dump = partial(openstep_plist.dump, indent=2)
+        dump = partial(openstep_plist.dump, indent=0)
 
     elif method == "-g":
 
@@ -48,7 +48,6 @@ def main(args=None):
     infile = args[1]
 
     with open(infile, "r", encoding="utf-8") as fp:
-        # data = parse(fp, dict_type=OrderedDict)
         data = parse(fp)
 
     if len(args) > 2:
