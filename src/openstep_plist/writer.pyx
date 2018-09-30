@@ -16,6 +16,7 @@ from libc.stdint cimport uint16_t
 cimport cython
 
 from .util cimport (
+    tounicode,
     unicode_array_template,
     is_valid_unquoted_string_char,
     isprint,
@@ -69,11 +70,24 @@ cdef class Writer:
     cdef public array.array dest
     cdef bint unicode_escape
     cdef int float_precision
+    cdef unicode indent
+    cdef int current_indent_level
 
-    def __cinit__(self, bint unicode_escape=True, int float_precision=6):
+    def __cinit__(
+        self, bint unicode_escape=True, int float_precision=6, indent=None
+    ):
         self.dest = array.clone(unicode_array_template, 0, zero=False)
         self.unicode_escape = unicode_escape
         self.float_precision = float_precision
+
+        if indent is not None:
+            if isinstance(indent, basestring):
+                self.indent = tounicode(indent)
+            else:
+                self.indent = ' ' * indent
+        else:
+            self.indent = None
+        self.current_indent_level = 0
 
     def getvalue(self):
         return self._getvalue()
@@ -302,21 +316,51 @@ cdef class Writer:
     cdef Py_ssize_t write_array_from_list(self, list seq) except -1:
         cdef:
             Py_ssize_t length = len(seq)
-            Py_ssize_t last = length - 1
+            Py_ssize_t last
             Py_ssize_t count
             Py_ssize_t i
             array.array dest = self.dest
+            unicode indent, newline_indent
+            const char *indent_chars = NULL
+            Py_ssize_t indent_length = 0
 
-        dest.append("(")
+        if length == 0:
+            dest.extend("()")
+            return 2
+
+        dest.append('(')
         count = 1
 
+        indent = self.indent
+        if indent is not None:
+            self.current_indent_level += 1
+            newline_indent = '\n' + self.current_indent_level * indent
+            indent_length = PyUnicode_GET_SIZE(newline_indent)
+            indent_chars = PyUnicode_AS_DATA(newline_indent)
+            array.extend_buffer(dest, <char*>indent_chars, indent_length)
+            count += indent_length
+
+        last = length - 1
         for i in range(length):
             count += self.write_object(seq[i])
             if i != last:
-                array.extend_buffer(dest, <char*>ARRAY_SEP_NO_INDENT, 2)
-                count += 2
+                if indent is None:
+                    array.extend_buffer(dest, <char*>ARRAY_SEP_NO_INDENT, 2)
+                    count += 2
+                else:
+                    dest.append(',')
+                    array.extend_buffer(dest, <char*>indent_chars, indent_length)
+                    count += 1 + indent_length
 
-        dest.append(")")
+        if indent is not None:
+            self.current_indent_level -= 1
+            newline_indent = '\n' + self.current_indent_level * indent
+            indent_length = PyUnicode_GET_SIZE(newline_indent)
+            indent_chars = PyUnicode_AS_DATA(newline_indent)
+            array.extend_buffer(dest, <char*>indent_chars, indent_length)
+            count += indent_length
+
+        dest.append(')')
         count += 1
 
         return count
@@ -326,34 +370,81 @@ cdef class Writer:
     cdef Py_ssize_t write_array_from_tuple(self, tuple seq) except -1:
         cdef:
             Py_ssize_t length = len(seq)
-            Py_ssize_t last = length - 1
+            Py_ssize_t last
             Py_ssize_t count
             Py_ssize_t i
             array.array dest = self.dest
+            unicode indent, newline_indent
+            const char *indent_chars = NULL
+            Py_ssize_t indent_length = 0
 
-        dest.append("(")
+        if length == 0:
+            dest.extend("()")
+            return 2
+
+        dest.append('(')
         count = 1
 
+        indent = self.indent
+        if indent is not None:
+            self.current_indent_level += 1
+            newline_indent = '\n' + self.current_indent_level * indent
+            indent_length = PyUnicode_GET_SIZE(newline_indent)
+            indent_chars = PyUnicode_AS_DATA(newline_indent)
+            array.extend_buffer(dest, <char*>indent_chars, indent_length)
+            count += indent_length
+
+        last = length - 1
         for i in range(length):
             count += self.write_object(seq[i])
             if i != last:
-                array.extend_buffer(dest, <char*>ARRAY_SEP_NO_INDENT, 2)
-                count += 2
+                if indent is None:
+                    array.extend_buffer(dest, <char*>ARRAY_SEP_NO_INDENT, 2)
+                    count += 2
+                else:
+                    dest.append(',')
+                    array.extend_buffer(dest, <char*>indent_chars, indent_length)
+                    count += 1 + indent_length
 
-        dest.append(")")
+        if indent is not None:
+            self.current_indent_level -= 1
+            newline_indent = '\n' + self.current_indent_level * indent
+            indent_length = PyUnicode_GET_SIZE(newline_indent)
+            indent_chars = PyUnicode_AS_DATA(newline_indent)
+            array.extend_buffer(dest, <char*>indent_chars, indent_length)
+            count += indent_length
+
+        dest.append(')')
         count += 1
 
         return count
 
     cdef Py_ssize_t write_dict(self, dict d) except -1:
         cdef:
+            unicode indent
+            unicode newline_indent
+            const char *indent_chars = NULL
+            Py_ssize_t indent_length = 0
             array.array dest = self.dest
-            Py_ssize_t last = len(d) - 1
-            Py_ssize_t count
+            Py_ssize_t last, count, i
 
-        dest.append("{")
+        if not d:
+            dest.extend("{}")
+            return 2
+
+        dest.append('{')
         count = 1
 
+        indent = self.indent
+        if indent is not None:
+            self.current_indent_level += 1
+            newline_indent = '\n' + self.current_indent_level * indent
+            indent_length = PyUnicode_GET_SIZE(newline_indent)
+            indent_chars = PyUnicode_AS_DATA(newline_indent)
+            array.extend_buffer(dest, <char*>indent_chars, indent_length)
+            count += indent_length
+
+        last = len(d) - 1
         for i, (key, value) in enumerate(sorted(d.items())):
             if not isinstance(key, unicode):
                 key = unicode(key)
@@ -365,25 +456,46 @@ cdef class Writer:
             count += self.write_object(value)
 
             if i != last:
-                array.extend_buffer(dest, <char*>DICT_ITEM_SEP_NO_INDENT, 2)
-                count += 2
+                if indent is None:
+                    array.extend_buffer(dest, <char*>DICT_ITEM_SEP_NO_INDENT, 2)
+                    count += 2
+                else:
+                    dest.append(';')
+                    array.extend_buffer(dest, <char*>indent_chars, indent_length)
+                    count += 1 + indent_length
             else:
-                dest.append(";")
+                dest.append(';')
                 count += 1
 
-        dest.append("}")
+        if indent is not None:
+            self.current_indent_level -= 1
+            newline_indent = '\n' + self.current_indent_level * indent
+            indent_length = PyUnicode_GET_SIZE(newline_indent)
+            indent_chars = PyUnicode_AS_DATA(newline_indent)
+            array.extend_buffer(dest, <char*>indent_chars, indent_length)
+            count += indent_length
+
+        dest.append('}')
         count += 1
 
         return count
 
 
-def dumps(obj, bint unicode_escape=True, int float_precision=6):
-    w = Writer(unicode_escape=unicode_escape, float_precision=float_precision)
+def dumps(obj, bint unicode_escape=True, int float_precision=6, indent=None):
+    w = Writer(
+        unicode_escape=unicode_escape,
+        float_precision=float_precision,
+        indent=indent,
+    )
     w.write(obj)
     return w.getvalue()
 
 
-def dump(obj, fp, bint unicode_escape=True, int float_precision=6):
-    w = Writer(unicode_escape=unicode_escape, float_precision=float_precision)
+def dump(obj, fp, bint unicode_escape=True, int float_precision=6, indent=None):
+    w = Writer(
+        unicode_escape=unicode_escape,
+        float_precision=float_precision,
+        indent=indent,
+    )
     w.write(obj)
     w.dump(fp)
