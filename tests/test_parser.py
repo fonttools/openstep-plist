@@ -292,7 +292,7 @@ def test_load():
 
 def test_load_from_bytes():
     if sys.version_info.major < 3:
-        assert openstep_plist.loads(b"{a=1;}") == {"a": "1"}
+        assert openstep_plist.loads(b"{a=1;}") == {"a": 1}
     else:
         with pytest.raises(TypeError, match="Could not convert to unicode"):
             openstep_plist.loads(b"{a=1;}")
