@@ -35,17 +35,12 @@ cdef Py_UNICODE *DICT_ITEM_SEP_NO_INDENT = [c';', c' ']
 
 
 cdef inline bint is_valid_unquoted_string(const Py_UNICODE *a, Py_ssize_t length):
+    # if string starts with digit or with a '-', always write it within quotes
+    # to distinguish it from an actual (signed) integer or float number, which
+    # are always written without quotes
     cdef Py_UNICODE ch = a[0]
-    # if string starts with digit, or with a '-' followed by a digit, always
-    # write it within quotes to distinguish it from an actual (signed) integer
-    # or float number, which are always written without quotes
-    if c'0' <= ch <= c'9':
+    if c'0' <= ch <= c'9' or ch == c'-':
         return False
-    elif ch == c'-':
-        if length > 1:
-            ch = a[1]
-            if c'0' <= ch <= c'9':
-                return False
 
     cdef Py_ssize_t i
     for i in range(length):
