@@ -25,7 +25,6 @@ from .util cimport (
     high_surrogate_from_unicode_scalar,
     low_surrogate_from_unicode_scalar,
 )
-from .parser cimport get_unquoted_string_type, UnquotedType, UNQUOTED_STRING
 
 
 cdef Py_UNICODE *HEX_MAP = [
@@ -38,7 +37,7 @@ cdef Py_UNICODE *DICT_KEY_VALUE_SEP = [c' ', c'=', c' ']
 cdef Py_UNICODE *DICT_ITEM_SEP_NO_INDENT = [c';', c' ']
 
 
-# this table includes A-Z, a-z, '.', '_' and '$'
+# this table includes A-Z, a-z, 0-9, '.', '_' and '$'
 cdef bint *VALID_UNQUOTED_CHARS = [
     False, False, False, False, False, False, False, False,
     False, False, False, False, False, False, False, False,
@@ -64,19 +63,34 @@ cdef bint is_valid_unquoted_string(const Py_UNICODE *a, Py_ssize_t length):
     if length == 0:
         return False
 
-    # check if the string could be confused with an integer or float,
-    # and if so write it within quotes to disambiguate its type
-    cdef UnquotedType kind = get_unquoted_string_type(a, length)
-    if kind != UNQUOTED_STRING:
-        return False
+    cdef:
+        Py_ssize_t i
+        Py_UNICODE ch
+        bint is_number = True
+        bint seen_period = False
 
-    cdef Py_ssize_t i
-    cdef Py_UNICODE ch
     for i in range(length):
         ch = a[i]
+        # if non-ASCII or contains any invalid unquoted characters,
+        # we must write it with quotes
         if ch > 0x7F or not VALID_UNQUOTED_CHARS[ch]:
             return False
-    return True
+        elif is_number:
+            # check if the string could be confused with an integer or float;
+            # if so we write it with quotes to disambiguate its type
+            if isdigit(ch):
+                continue
+            elif ch == c".":
+                if not seen_period:
+                    seen_period = True
+                else:
+                    # if it contains two '.', it can't be a number
+                    is_number = False
+            else:
+                # if any characters not in ".0123456789", it's not a number
+                is_number = False
+
+    return not is_number
 
 
 cdef inline void escape_unicode(uint16_t ch, Py_UNICODE *dest):
