@@ -247,7 +247,6 @@ cdef class Writer:
         array.extend_buffer(dest, <char*>s, length)
         return length
 
-
     cdef Py_ssize_t write_string(self, unicode string) except -1:
         cdef:
             Py_UNICODE *s = PyUnicode_AS_UNICODE(string)
