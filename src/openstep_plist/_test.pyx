@@ -31,7 +31,7 @@ cdef class ParseContext:
             string,
             Py_ssize_t offset=0,
             dict_type=dict,
-            bint use_numbers=True
+            bint use_numbers=False
     ):
         cdef ParseContext self = ParseContext.__new__(cls)
         self.s = tounicode(string)

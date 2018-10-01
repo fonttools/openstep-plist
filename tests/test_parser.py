@@ -118,15 +118,9 @@ def test_get_slashed_char(string, expected):
     [
         ("a", "a"),
         ("abc;", "abc"),  # trailing chars left in buffer
-        ("1", 1),
-        ("-1", -1),
-        ("123456789", 123456789),
-        ("1.23456789", 1.23456789),
-        ("-12.3456789", -12.3456789),
-        ("1z", "1z"),  # non-numbers parsed as strings
-        ("-9y", "-9y"),
-        ("-", "-"),
-        ("x123", "x123"),
+        ("1", "1"),
+        ("123456789", "123456789"),
+        ("1.23456789", "1.23456789"),
     ],
 )
 def test_parse_unquoted_plist_string(string, expected):
@@ -172,11 +166,11 @@ def test_parse_plist_string_invalid_char():
 
 
 def test_parse_plist_array():
-    assert openstep_plist.loads("(1)") == [1]
-    assert openstep_plist.loads("(1,)") == [1]
-    assert openstep_plist.loads("(\t1  \r\n, 2.2, c,\n)") == [1, 2.2, "c"]
+    assert openstep_plist.loads("(1)") == ["1"]
+    assert openstep_plist.loads("(1,)") == ["1"]
+    assert openstep_plist.loads("(\t1  \r\n, 2.2, c,\n)") == ["1", "2.2", "c"]
     assert openstep_plist.loads("('1', '2')") == ["1", "2"]
-    assert openstep_plist.loads("(\n1,\n\"'2'\"\n)") == [1, "'2'"]
+    assert openstep_plist.loads("(\n1,\n\"'2'\"\n)") == ["1", "'2'"]
 
 
 @pytest.mark.parametrize("string, lineno", [("(a ", 1), ("(a,\nb,\r\nc", 3)])
@@ -205,12 +199,12 @@ def test_parse_plist_dict_empty():
 @pytest.mark.parametrize(
     "string, expected",
     [
-        ("{a=1;}", {"a": 1}),
+        ("{a=1;}", {"a": "1"}),
         ('{"a"="1";}', {"a": "1"}),
         ("{'a'='1';}", {"a": "1"}),
-        ("{\na = 1;\n}", {"a": 1}),
-        ("{\na\n=\n1;\n}", {"a": 1}),
-        ("{a=1;b;}", {"a": 1, "b": "b"}),
+        ("{\na = 1;\n}", {"a": "1"}),
+        ("{\na\n=\n1;\n}", {"a": "1"}),
+        ("{a=1;b;}", {"a": "1", "b": "b"}),
     ],
 )
 def test_parse_plist_dict(string, expected):
@@ -279,20 +273,20 @@ def test_parse_plist_object_invalid():
 
 def test_parse_string_resources():
     assert openstep_plist.loads("a=1;\n'b' = 2.4;\n'c' = \"hello world\";") == {
-        "a": 1,
-        "b": 2.4,
+        "a": "1",
+        "b": "2.4",
         "c": "hello world",
     }
 
 
 def test_load():
     fp = StringIO("{a=1;}")
-    assert openstep_plist.load(fp) == {"a": 1}
+    assert openstep_plist.load(fp) == {"a": "1"}
 
 
 def test_load_from_bytes():
     if sys.version_info.major < 3:
-        assert openstep_plist.loads(b"{a=1;}") == {"a": 1}
+        assert openstep_plist.loads(b"{a=1;}") == {"a": "1"}
     else:
         with pytest.raises(TypeError, match="Could not convert to unicode"):
             openstep_plist.loads(b"{a=1;}")
@@ -301,14 +295,14 @@ def test_load_from_bytes():
 @pytest.mark.parametrize(
     "string, expected",
     [
-        ("{a = 2;}", {"a": "2"}),
-        ("{a = {b = -2;};}", {"a": {"b": "-2"}}),
-        ("{a = (1.5, -23.9999);}", {"a": ["1.5", "-23.9999"]}),
+        ("{a = 2;}", {"a": 2}),
+        ("{a = {b = -2;};}", {"a": {"b": -2}}),
+        ("{a = (1.5, -23.9999);}", {"a": [1.5, -23.9999]}),
         ("{a = x123; b = -c; minus = -;}", {"a": "x123", "b": "-c", "minus": "-"}),
     ],
 )
-def test_loads_no_use_numbers(string, expected):
-    assert openstep_plist.loads(string, use_numbers=False) == expected
+def test_loads_use_numbers(string, expected):
+    assert openstep_plist.loads(string, use_numbers=True) == expected
 
 
 def test_loads_dict_type():
