@@ -2,11 +2,8 @@ env:
   global:
     # directory containing the project source
     - REPO_DIR=.
-    - BUILD_DEPENDS="wheel==0.31.1"
     # pip dependencies to _test_ project
-    - TEST_DEPENDS="tox wheel==0.31.1"
-    # this to so prevent the latest wheel==0.32.0 from being installed in the venv
-    - VIRTUALENV_NO_DOWNLOAD=1
+    - TEST_DEPENDS="tox"
     - PLAT=x86_64
     - UNICODE_WIDTH=32
     - TWINE_USERNAME="anthrotype"
