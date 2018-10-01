@@ -2,7 +2,7 @@
 from __future__ import absolute_import, unicode_literals
 import openstep_plist
 from openstep_plist.writer import Writer
-from openstep_plist._test import is_narrow_unicode, is_valid_unquoted_string
+from openstep_plist._test import is_narrow_unicode, string_needs_quotes
 from io import StringIO, BytesIO
 from collections import OrderedDict
 import string
@@ -239,33 +239,33 @@ invalid_unquoted_chars = [
 @pytest.mark.parametrize(
     "string, expected",
     [
-        (string.ascii_uppercase, True),
-        (string.ascii_lowercase, True),
+        (string.ascii_uppercase, False),
+        (string.ascii_lowercase, False),
         # digits are allowed unquoted if not in first position
-        ("a" + string.digits, True),
-        (".appVersion", True),
-        ("_private", True),
-        ("$PWD", True),
-        ("1zzz", True),
-        ("192.168.1.1", True),
-        ("0", False),
-        ("1", False),
-        ("2", False),
-        ("3", False),
-        ("4", False),
-        ("5", False),
-        ("6", False),
-        ("7", False),
-        ("8", False),
-        ("9", False),
-        ("", False),
-        ("-", False),
-        ("A-Z", False),
-        ("hello world", False),
-        ("\\backslash", False),
-        ("http://github.com", False),
-        (random.choice(invalid_unquoted_chars), False),
+        ("a" + string.digits, False),
+        (".appVersion", False),
+        ("_private", False),
+        ("$PWD", False),
+        ("1zzz", False),
+        ("192.168.1.1", False),
+        ("0", True),
+        ("1", True),
+        ("2", True),
+        ("3", True),
+        ("4", True),
+        ("5", True),
+        ("6", True),
+        ("7", True),
+        ("8", True),
+        ("9", True),
+        ("", True),
+        ("-", True),
+        ("A-Z", True),
+        ("hello world", True),
+        ("\\backslash", True),
+        ("http://github.com", True),
+        (random.choice(invalid_unquoted_chars), True),
     ],
 )
-def test_is_valid_unquoted_string(string, expected):
-    assert is_valid_unquoted_string(string) is expected
+def test_string_needs_quotes(string, expected):
+    assert string_needs_quotes(string) is expected

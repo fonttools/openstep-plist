@@ -58,10 +58,10 @@ cdef bint *VALID_UNQUOTED_CHARS = [
 ]
 
 
-cdef bint is_valid_unquoted_string(const Py_UNICODE *a, Py_ssize_t length):
+cdef bint string_needs_quotes(const Py_UNICODE *a, Py_ssize_t length):
     # empty string is always quoted
     if length == 0:
-        return False
+        return True
 
     cdef:
         Py_ssize_t i
@@ -74,7 +74,7 @@ cdef bint is_valid_unquoted_string(const Py_UNICODE *a, Py_ssize_t length):
         # if non-ASCII or contains any invalid unquoted characters,
         # we must write it with quotes
         if ch > 0x7F or not VALID_UNQUOTED_CHARS[ch]:
-            return False
+            return True
         elif is_number:
             # check if the string could be confused with an integer or float;
             # if so we write it with quotes to disambiguate its type
@@ -90,7 +90,7 @@ cdef bint is_valid_unquoted_string(const Py_UNICODE *a, Py_ssize_t length):
                 # if any characters not in ".0123456789", it's not a number
                 is_number = False
 
-    return not is_number
+    return is_number
 
 
 cdef inline void escape_unicode(uint16_t ch, Py_UNICODE *dest):
@@ -294,11 +294,11 @@ cdef class Writer:
             Py_ssize_t length = PyUnicode_GET_SIZE(string)
             array.array dest = self.dest
 
-        if is_valid_unquoted_string(s, length):
+        if string_needs_quotes(s, length):
+            return self.write_quoted_string(s, length)
+        else:
             array.extend_buffer(dest, <char *>s, length)
             return length
-        else:
-            return self.write_quoted_string(s, length)
 
     cdef Py_ssize_t write_short_float_repr(self, object py_float) except -1:
         cdef:
