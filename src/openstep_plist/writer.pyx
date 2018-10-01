@@ -156,7 +156,7 @@ cdef class Writer:
 
         while curr < end:
             ch = curr[0]
-            if ch == c'\t':
+            if ch == c'\t' or ch == c' ':
                 new_length += 1
             elif (
                 ch == c'\n' or ch == c'\\' or ch == c'"' or ch == c'\a'
@@ -165,7 +165,7 @@ cdef class Writer:
                 new_length += 2
             else:
                 if ch < 128:
-                    if isprint(ch) or ch == c' ':
+                    if isprint(ch):
                         new_length += 1
                     else:
                         new_length += 4
@@ -186,7 +186,7 @@ cdef class Writer:
         curr = s
         while curr < end:
             ch = curr[0]
-            if ch == c'\t':
+            if ch == c'\t' or ch == c' ':
                 ptr[0] = ch
                 ptr += 1
             elif ch == c'\n':
@@ -207,7 +207,7 @@ cdef class Writer:
                 ptr[0] = c'\\'; ptr[1] = c'r'; ptr += 2
             else:
                 if ch < 128:
-                    if isprint(ch) or ch == c' ':
+                    if isprint(ch):
                         ptr[0] = ch
                         ptr += 1
                     else:
