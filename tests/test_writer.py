@@ -2,9 +2,11 @@
 from __future__ import absolute_import, unicode_literals
 import openstep_plist
 from openstep_plist.writer import Writer
-from openstep_plist._test import is_narrow_unicode
+from openstep_plist._test import is_narrow_unicode, is_valid_unquoted_string
 from io import StringIO, BytesIO
 from collections import OrderedDict
+import string
+import random
 import pytest
 
 
@@ -42,8 +44,8 @@ class TestWriter(object):
             ("\x1a\x1b\x1c\x1d\x1e\x1f\x7f", '"\\032\\033\\034\\035\\036\\037\\177"'),
             ("\x80\x81\x9E\x9F\xA0", '"\\U0080\\U0081\\U009E\\U009F\\U00A0"'),
             ("\U0001F4A9", '"\\UD83D\\UDCA9"'),  # '💩'
-            # if string starts with digit or '-', always quote it to distinguish
-            # from (signed) int or float number (always unquoted)
+            # if string starts with digit, always quote it to distinguish
+            # from int or float number (always unquoted)
             ("1", '"1"'),
             ("1.1", '"1.1"'),
             ("-23", '"-23"'),
@@ -226,3 +228,44 @@ def test_dump():
 
     with pytest.raises(AttributeError):
         openstep_plist.dump(plist, object())
+
+
+valid_unquoted_chars = (
+    string.ascii_uppercase + string.ascii_lowercase + string.digits + "._$"
+)
+invalid_unquoted_chars = [
+    chr(c) for c in range(128) if chr(c) not in valid_unquoted_chars
+]
+
+
+@pytest.mark.parametrize(
+    "string, expected",
+    [
+        (string.ascii_uppercase, True),
+        (string.ascii_lowercase, True),
+        # digits are allowed unquoted if not in first position
+        ("a" + string.digits, True),
+        (".appVersion", True),
+        ("_private", True),
+        ("$PWD", True),
+        ("0", False),
+        ("1", False),
+        ("2", False),
+        ("3", False),
+        ("4", False),
+        ("5", False),
+        ("6", False),
+        ("7", False),
+        ("8", False),
+        ("9", False),
+        ("", False),
+        ("-", False),
+        ("A-Z", False),
+        ("hello world", False),
+        ("\\backslash", False),
+        ("http://github.com", False),
+        (random.choice(invalid_unquoted_chars), False),
+    ],
+)
+def test_is_valid_unquoted_string(string, expected):
+    assert is_valid_unquoted_string(string) is expected

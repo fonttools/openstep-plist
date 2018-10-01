@@ -14,6 +14,7 @@ from .util cimport (
     tounicode,
     is_valid_unquoted_string_char as _is_valid_unquoted_string_char,
 )
+from .writer cimport is_valid_unquoted_string as _is_valid_unquoted_string
 from cpython.unicode cimport (
     PyUnicode_FromUnicode, PyUnicode_AS_UNICODE, PyUnicode_GET_SIZE,
 )
@@ -80,3 +81,8 @@ def parse_unquoted_plist_string(s):
 def parse_plist_string(s, required=True):
     cdef ParseContext ctx = ParseContext.fromstring(s)
     return _parse_plist_string(&ctx.pi, required=required)
+
+
+def is_valid_unquoted_string(s):
+    cdef ParseContext ctx = ParseContext.fromstring(s)
+    return _is_valid_unquoted_string(ctx.pi.begin, len(s))

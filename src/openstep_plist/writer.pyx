@@ -19,7 +19,7 @@ cimport cython
 from .util cimport (
     tounicode,
     unicode_array_template,
-    is_valid_unquoted_string_char,
+    isdigit,
     isprint,
     PY_NARROW_UNICODE,
     high_surrogate_from_unicode_scalar,
@@ -37,17 +37,42 @@ cdef Py_UNICODE *DICT_KEY_VALUE_SEP = [c' ', c'=', c' ']
 cdef Py_UNICODE *DICT_ITEM_SEP_NO_INDENT = [c';', c' ']
 
 
-cdef inline bint is_valid_unquoted_string(const Py_UNICODE *a, Py_ssize_t length):
-    # if string starts with digit or with a '-', always write it within quotes
-    # to distinguish it from an actual (signed) integer or float number, which
-    # are always written without quotes
+# this table includes A-Z, a-z, '.', '_' and '$'
+cdef bint *VALID_UNQUOTED_CHARS = [
+    False, False, False, False, False, False, False, False,
+    False, False, False, False, False, False, False, False,
+    False, False, False, False, False, False, False, False,
+    False, False, False, False, False, False, False, False,
+    False, False, False, False, True, False, False, False,
+    False, False, False, False, False, False, True, False,
+    True, True, True, True, True, True, True, True,
+    True, True, False, False, False, False, False, False,
+    False, True, True, True, True, True, True, True,
+    True, True, True, True, True, True, True, True,
+    True, True, True, True, True, True, True, True,
+    True, True, True, False, False, False, False, True,
+    False, True, True, True, True, True, True, True,
+    True, True, True, True, True, True, True, True,
+    True, True, True, True, True, True, True, True,
+    True, True, True, False, False, False, False, False,
+]
+
+
+cdef bint is_valid_unquoted_string(const Py_UNICODE *a, Py_ssize_t length):
+    # empty string is always quoted
+    if length == 0:
+        return False
+
+    # if string starts with digit, always write it within quotes to distinguish
+    # it from an actual integer or float number, always written unquoted
     cdef Py_UNICODE ch = a[0]
-    if c'0' <= ch <= c'9' or ch == c'-':
+    if ch > 0x7F or isdigit(ch):
         return False
 
     cdef Py_ssize_t i
     for i in range(length):
-        if not is_valid_unquoted_string_char(a[i]):
+        ch = a[i]
+        if ch > 0x7F or not VALID_UNQUOTED_CHARS[ch]:
             return False
     return True
 
@@ -253,7 +278,7 @@ cdef class Writer:
             Py_ssize_t length = PyUnicode_GET_SIZE(string)
             array.array dest = self.dest
 
-        if length > 0 and is_valid_unquoted_string(s, length):
+        if is_valid_unquoted_string(s, length):
             array.extend_buffer(dest, <char *>s, length)
             return length
         else:
