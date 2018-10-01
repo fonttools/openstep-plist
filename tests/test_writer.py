@@ -44,12 +44,12 @@ class TestWriter(object):
             ("\x1a\x1b\x1c\x1d\x1e\x1f\x7f", '"\\032\\033\\034\\035\\036\\037\\177"'),
             ("\x80\x81\x9E\x9F\xA0", '"\\U0080\\U0081\\U009E\\U009F\\U00A0"'),
             ("\U0001F4A9", '"\\UD83D\\UDCA9"'),  # '💩'
-            # if string starts with digit, always quote it to distinguish
-            # from int or float number (always unquoted)
+            # if string may be confused with a number wrap it in quotes
             ("1", '"1"'),
             ("1.1", '"1.1"'),
             ("-23", '"-23"'),
-            ("1zzz", '"1zzz"'),  # ... even if it's not actually a number
+            ("1zzz", "1zzz"),
+            ("192.168.1.1", "192.168.1.1"),
             ("-23yyy", '"-23yyy"'),
             ("-", '"-"'),
             ("-a-", '"-a-"'),

@@ -243,14 +243,10 @@ def string_to_number(unicode s not None, bint required=True):
     if length:
         buf = PyUnicode_AS_UNICODE(s)
         kind = get_unquoted_string_type(buf, length)
-        try:
-            if kind == UNQUOTED_FLOAT:
-                return float(s)
-            elif kind == UNQUOTED_INTEGER:
-                return int(s)
-        except ValueError:
-            if required:
-                raise
+        if kind == UNQUOTED_FLOAT:
+            return float(s)
+        elif kind == UNQUOTED_INTEGER:
+            return int(s)
 
     if required:
         raise ValueError(f"Could not convert string to float or int: {s!r}")
@@ -263,13 +259,14 @@ cdef UnquotedType get_unquoted_string_type(
 ):
     """Check if Py_UNICODE array starts with a digit, or '-' followed
     by a digit, and if it contains a decimal point '.'.
-    Return 0 if string cannot contain a number, 1 if it may contain an
-    integer, and 2 if it may contain a float.
+    Return 0 if string cannot contain a number, 1 if it contains an
+    integer, and 2 if it contains a float.
     """
     # NOTE: floats in scientific notation (e.g. 1e-5) or starting with a
     # "." (e.g. .05) are not handled here, but are treated as strings.
     cdef:
         bint maybe_number = True
+        bint is_float = False
         int i = 0
         # deref here is safe since Py_UNICODE* are NULL-terminated
         Py_UNICODE ch = buf[i]
@@ -287,10 +284,17 @@ cdef UnquotedType get_unquoted_string_type(
 
     if maybe_number:
         for i in range(i, length):
-            if buf[i] == c'.':
-                return UNQUOTED_FLOAT
-        else:
-            return UNQUOTED_INTEGER
+            ch = buf[i]
+            if ch > c'9' or ch < c'.' or ch == c'/':
+                return UNQUOTED_STRING  # not a number
+            elif ch == c'.':
+                if not is_float:
+                    is_float = True
+                else:
+                    # seen a second '.', it's not a float
+                    return UNQUOTED_STRING
+
+        return UNQUOTED_FLOAT if is_float else UNQUOTED_INTEGER
 
     return UNQUOTED_STRING
 
@@ -314,19 +318,11 @@ cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=False)
         s = PyUnicode_FromUnicode(mark, length)
 
         if not ensure_string and pi.use_numbers:
-            # If it doesn't start with a digit, or a '-' followed by a digit,
-            # then it can't be a number and we keep it as string.
-            # If contains a decimal point, we try to parse it as a float,
-            # otherwise as an int; if either fails, we keep is as string.
-            # We don't support scientific notation...
             kind = get_unquoted_string_type(mark, length)
-            try:
-                if kind == UNQUOTED_FLOAT:
-                    return float(s)
-                elif kind == UNQUOTED_INTEGER:
-                    return int(s)
-            except ValueError:
-                pass
+            if kind == UNQUOTED_FLOAT:
+                return float(s)
+            elif kind == UNQUOTED_INTEGER:
+                return int(s)
 
         return s
 

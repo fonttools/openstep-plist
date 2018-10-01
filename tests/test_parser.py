@@ -319,7 +319,7 @@ def test_string_to_number(string, expected):
     assert string_to_number(string) == expected
 
 
-@pytest.mark.parametrize("string", ["", "10000s", " 1.5", "-", ".5", "1e-4"])
+@pytest.mark.parametrize("string", ["", "10000s", " 1.5", "-", ".5", "1e-4", "1.2.3"])
 @pytest.mark.parametrize("required", [True, False])
 def test_string_to_number_invalid(string, required):
     if required:

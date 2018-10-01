@@ -25,6 +25,7 @@ from .util cimport (
     high_surrogate_from_unicode_scalar,
     low_surrogate_from_unicode_scalar,
 )
+from .parser cimport get_unquoted_string_type, UnquotedType, UNQUOTED_STRING
 
 
 cdef Py_UNICODE *HEX_MAP = [
@@ -63,13 +64,14 @@ cdef bint is_valid_unquoted_string(const Py_UNICODE *a, Py_ssize_t length):
     if length == 0:
         return False
 
-    # if string starts with digit, always write it within quotes to distinguish
-    # it from an actual integer or float number, always written unquoted
-    cdef Py_UNICODE ch = a[0]
-    if ch > 0x7F or isdigit(ch):
+    # check if the string could be confused with an integer or float,
+    # and if so write it within quotes to disambiguate its type
+    cdef UnquotedType kind = get_unquoted_string_type(a, length)
+    if kind != UNQUOTED_STRING:
         return False
 
     cdef Py_ssize_t i
+    cdef Py_UNICODE ch
     for i in range(length):
         ch = a[i]
         if ch > 0x7F or not VALID_UNQUOTED_CHARS[ch]:
