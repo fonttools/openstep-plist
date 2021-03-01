@@ -114,9 +114,11 @@ cdef class Writer:
     cdef int float_precision
     cdef unicode indent
     cdef int current_indent_level
+    cdef bint single_line_tuples
 
     def __cinit__(
-        self, bint unicode_escape=True, int float_precision=6, indent=None
+        self, bint unicode_escape=True, int float_precision=6, indent=None,
+        single_line_tuples=False
     ):
         self.dest = array.clone(unicode_array_template, 0, zero=False)
         self.unicode_escape = unicode_escape
@@ -129,6 +131,7 @@ cdef class Writer:
                 self.indent = ' ' * indent
         else:
             self.indent = None
+        self.single_line_tuples = single_line_tuples
         self.current_indent_level = 0
 
     def getvalue(self):
@@ -433,7 +436,7 @@ cdef class Writer:
         count = 1
 
         indent = self.indent
-        if indent is not None:
+        if indent is not None and not self.single_line_tuples:
             self.current_indent_level += 1
             newline_indent = '\n' + self.current_indent_level * indent
             indent_length = PyUnicode_GET_SIZE(newline_indent)
@@ -453,7 +456,7 @@ cdef class Writer:
                     array.extend_buffer(dest, <char*>indent_chars, indent_length)
                     count += 1 + indent_length
 
-        if indent is not None:
+        if indent is not None and not self.single_line_tuples:
             self.current_indent_level -= 1
             newline_indent = '\n' + self.current_indent_level * indent
             indent_length = PyUnicode_GET_SIZE(newline_indent)
@@ -594,21 +597,25 @@ cdef class Writer:
         return count
 
 
-def dumps(obj, bint unicode_escape=True, int float_precision=6, indent=None):
+def dumps(obj, bint unicode_escape=True, int float_precision=6, indent=None,
+          single_line_tuples=False):
     w = Writer(
         unicode_escape=unicode_escape,
         float_precision=float_precision,
         indent=indent,
+        single_line_tuples=single_line_tuples,
     )
     w.write(obj)
     return w.getvalue()
 
 
-def dump(obj, fp, bint unicode_escape=True, int float_precision=6, indent=None):
+def dump(obj, fp, bint unicode_escape=True, int float_precision=6, indent=None,
+         single_line_tuples=False):
     w = Writer(
         unicode_escape=unicode_escape,
         float_precision=float_precision,
         indent=indent,
+        single_line_tuples=single_line_tuples,
     )
     w.write(obj)
     w.dump(fp)
