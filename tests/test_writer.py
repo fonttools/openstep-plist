@@ -269,3 +269,25 @@ invalid_unquoted_chars = [
 )
 def test_string_needs_quotes(string, expected):
     assert string_needs_quotes(string) is expected
+
+
+def test_single_line_tuples():
+    assert openstep_plist.dumps({"a": 1, "b": (2, 3), "c": "Hello"}, indent=0) == (
+        """{
+a = 1;
+b = (
+2,
+3
+);
+c = Hello;
+}"""
+    )
+    assert openstep_plist.dumps(
+        {"a": 1, "b": (2, 3), "c": "Hello"}, indent=0, single_line_tuples=True
+    ) == (
+        """{
+a = 1;
+b = (2,3);
+c = Hello;
+}"""
+    )
