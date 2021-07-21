@@ -453,6 +453,9 @@ cdef class Writer:
                     count += 2
                 else:
                     dest.append(',')
+                    if self.single_line_tuples:
+                        dest.append(' ')
+                        count += 1
                     array.extend_buffer(dest, <char*>indent_chars, indent_length)
                     count += 1 + indent_length
 
