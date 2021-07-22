@@ -117,8 +117,11 @@ cdef class Writer:
     cdef bint single_line_tuples
 
     def __cinit__(
-        self, bint unicode_escape=True, int float_precision=6, indent=None,
-        single_line_tuples=False
+        self,
+        bint unicode_escape=True,
+        int float_precision=6,
+        indent=None,
+        bint single_line_tuples=False,
     ):
         self.dest = array.clone(unicode_array_template, 0, zero=False)
         self.unicode_escape = unicode_escape
