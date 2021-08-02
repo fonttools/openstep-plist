@@ -30,11 +30,11 @@ jobs:
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel==2.0.1
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir wheelhouse
+        run: python -m cibuildwheel --output-dir dist
       - uses: actions/upload-artifact@v2
         with:
           name: wheels
-          path: wheelhouse/*.whl
+          path: dist/*.whl
 
   deploy:
     # only run if the commit is tagged...
@@ -57,14 +57,7 @@ jobs:
     - name: Download artifacts from build jobs
       uses: actions/download-artifact@v2
       with:
-        path: wheelhouse/
-    - name: Move wheels to dist/ directory
-      run: |
-        ls wheelhouse/*
-        mkdir -p dist/
-        for wheel_dir in wheelhouse/*.whl; do
-          mv "${wheel_dir}" dist/
-        done
+        path: dist
     - name: Extract release notes from annotated tag message
       id: release_notes
       env:
