@@ -102,5 +102,6 @@ jobs:
         else
           echo "DEBUG: This is a final release"
         fi
+        pip install cython
         python setup.py sdist
         twine upload dist/*
