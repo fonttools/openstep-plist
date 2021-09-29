@@ -1,4 +1,4 @@
-[![Githun CI Status](https://github.com/fonttools/skia-pathops/workflows/Wheels/badge.svg)](https://github.com/fonttools/skia-pathops/actions?query=workflow%3A%22Build+%2B+Deploy%22)
+[![Github CI Status](https://github.com/fonttools/openstep-plist/workflows/Wheels/badge.svg)](https://github.com/fonttools/openstep-plist/actions?query=workflow%3A%22Wheels%22)
 [![codecov](https://codecov.io/gh/fonttools/openstep-plist/branch/master/graph/badge.svg)](https://codecov.io/gh/fonttools/openstep-plist)
 [![PyPI](https://img.shields.io/pypi/v/openstep-plist.svg)](https://pypi.org/project/openstep-plist/)
 
