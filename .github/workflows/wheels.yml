@@ -18,7 +18,8 @@ jobs:
         os: [ "ubuntu-20.04", "windows-2019", "macos-11" ]
     env:
       CIBW_ARCHS: auto64
-      CIBW_SKIP: pp*
+      # skip 3.6 on all platforms; skip pypy for mac and windows, only build for linux
+      CIBW_SKIP: cp36-* pp*-macosx_x86_64 pp*-win_amd64
     steps:
       - uses: actions/checkout@v2
         with:
@@ -28,7 +29,7 @@ jobs:
         with:
           python-version: 3.9
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.0.1
+        run: python -m pip install cibuildwheel==2.1.2
       - name: Build wheels
         run: python -m cibuildwheel --output-dir dist
       - uses: actions/upload-artifact@v2

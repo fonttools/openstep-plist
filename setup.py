@@ -67,7 +67,7 @@ class cython_build_ext(_build_ext):
 
 
 class cython_sdist(_sdist):
-    """ Run 'cythonize' on *.pyx sources to ensure the *.c files included
+    """Run 'cythonize' on *.pyx sources to ensure the *.c files included
     in the source distribution are up-to-date.
     """
 
@@ -104,6 +104,8 @@ extensions = [
         "openstep_plist." + mod,
         sources=["src/openstep_plist/%s.pyx" % mod],
         include_dirs=include_dirs,
+        language="c++",
+        extra_compile_args=["-std=c++11"] if sys.platform != "win32" else [],
     )
     for mod in cython_modules
 ]

@@ -1,19 +1,20 @@
 #cython: language_level=3
 #distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
+from cpython.bytes cimport PyBytes_FromStringAndSize
 from cpython.unicode cimport (
     PyUnicode_FromUnicode, PyUnicode_AS_UNICODE, PyUnicode_GET_SIZE,
 )
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
-from cpython cimport array
+from libcpp.algorithm cimport copy
+from libcpp.iterator cimport back_inserter
+from libcpp.vector cimport vector
 from cpython.version cimport PY_MAJOR_VERSION
-import array
 cimport cython
 
 from .util cimport (
     tounicode,
     tostr,
-    unicode_array_template,
     is_valid_unquoted_string_char,
     isdigit,
     isxdigit,
@@ -180,7 +181,7 @@ cdef Py_UNICODE get_slashed_char(ParseInfo *pi):
 
 
 cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
-    cdef array.array string = array.clone(unicode_array_template, 0, zero=False)
+    cdef vector[Py_UNICODE] string
     cdef const Py_UNICODE *start_mark = pi.curr
     cdef const Py_UNICODE *mark = pi.curr
     cdef const Py_UNICODE *tmp
@@ -190,7 +191,8 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
         if ch == quote:
             break
         elif ch == c'\\':
-            array.extend_buffer(string, <char*>mark, pi.curr - mark)
+            string.reserve(string.size() + (pi.curr - mark))
+            copy(mark, pi.curr, back_inserter(string))
             pi.curr += 1
             ch = get_slashed_char(pi)
             # If we are NOT on a "narrow" python 2 build, then we need to parse
@@ -211,7 +213,7 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
                     # XXX maybe we should raise here instead of letting this
                     # lone high surrogate (not followed by a low) pass through?
                     pi.curr = tmp
-            string.append(ch)
+            string.push_back(ch)
             mark = pi.curr
         else:
             pi.curr += 1
@@ -220,15 +222,13 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
             "Unterminated quoted string starting on line %d"
             % line_number_strings(pi)
         )
-    if not string:
-        array.extend_buffer(string, <char*>mark, pi.curr - mark)
-    else:
-        if mark != pi.curr:
-            array.extend_buffer(string, <char*>mark, pi.curr - mark)
+    if mark != pi.curr:
+        string.reserve(string.size() + (pi.curr - mark))
+        copy(mark, pi.curr, back_inserter(string))
     # Advance past the quote character before returning
     pi.curr += 1
 
-    return PyUnicode_FromUnicode(string.data.as_pyunicodes, len(string))
+    return PyUnicode_FromUnicode(<const Py_UNICODE*>string.const_data(), string.size())
 
 
 def string_to_number(unicode s not None, bint required=True):
@@ -434,17 +434,14 @@ cdef inline unsigned char from_hex_digit(unsigned char ch):
     return 0xff  # Just choose a large number for the error code
 
 
-cdef array.array get_data_bytes(ParseInfo *pi):
-    cdef int first, second
+cdef int get_data_bytes(ParseInfo *pi, vector[unsigned char]& result) except -1:
+    cdef unsigned char first, second
     cdef int num_bytes_read = 0
     cdef Py_UNICODE ch1, ch2
-    # must convert array type code to native str type else when using
-    # unicode literals on py27 one gets 'TypeError: must be char, not unicode'
-    cdef array.array result = array.array(tostr('B'))
     while pi.curr < pi.end:
         ch1 = pi.curr[0]
         if ch1 == c'>':
-            return result
+            return 0
         first = from_hex_digit(<unsigned char>ch1)
         if first != 0xff:
             # if the first char is a hex, then try to read a second hex
@@ -466,7 +463,7 @@ cdef array.array get_data_bytes(ParseInfo *pi):
                     "Malformed data byte group at line %d: invalid hex digit: %r"
                     % (line_number_strings(pi), ch2)
             )
-            result.append((first << 4) + second)
+            result.push_back((first << 4) + second)
             pi.curr += 1
         elif (
             ch1 == c' ' or
@@ -485,13 +482,11 @@ cdef array.array get_data_bytes(ParseInfo *pi):
 
 
 cdef bytes parse_plist_data(ParseInfo *pi):
-    cdef array.array data = get_data_bytes(pi)
+    cdef vector[unsigned char] data
+    get_data_bytes(pi, data)
     if pi.curr[0] == c">":
         pi.curr += 1  # move past '>'
-        if PY_MAJOR_VERSION >= 3:
-            return data.tobytes()
-        else:
-            return data.tostring()
+        return PyBytes_FromStringAndSize(<const char*>data.const_data(), data.size())
     else:
         raise ParseError(
             "Expected terminating '>' for data at line %d"

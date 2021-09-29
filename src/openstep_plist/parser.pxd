@@ -1,7 +1,7 @@
 #cython: language_level=3
 
 from libc.stdint cimport uint32_t
-from cpython cimport array
+from libcpp.vector cimport vector
 
 
 ctypedef struct ParseInfo:
@@ -55,7 +55,7 @@ cdef object parse_plist_dict(ParseInfo *pi)
 cdef unsigned char from_hex_digit(unsigned char ch)
 
 
-cdef array.array get_data_bytes(ParseInfo *pi)
+cdef int get_data_bytes(ParseInfo *pi, vector[unsigned char]& result) except -1
 
 
 cdef bytes parse_plist_data(ParseInfo *pi)
