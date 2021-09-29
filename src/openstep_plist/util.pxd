@@ -1,6 +1,5 @@
 #cython: language_level=3
 
-from cpython cimport array
 from libc.stdint cimport uint16_t, uint32_t
 
 
@@ -14,9 +13,6 @@ cdef unicode tounicode(s, encoding=*, errors=*)
 
 
 cdef tostr(s, encoding=*, errors=*)
-
-
-cdef array.array unicode_array_template
 
 
 cdef bint is_valid_unquoted_string_char(Py_UNICODE x)
