@@ -18,8 +18,8 @@ jobs:
         os: [ "ubuntu-20.04", "windows-2019", "macos-11" ]
     env:
       CIBW_ARCHS: auto64
-      # skip pypy builds for mac and windows, only build for linux
-      CIBW_SKIP: pp*-macosx_x86_64 pp*-win_amd64
+      # skip 3.6 on all platforms; skip pypy for mac and windows, only build for linux
+      CIBW_SKIP: cp36-* pp*-macosx_x86_64 pp*-win_amd64
     steps:
       - uses: actions/checkout@v2
         with:
