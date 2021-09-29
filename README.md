@@ -1,5 +1,4 @@
-[![Travis CI Build Status](https://travis-ci.org/fonttools/openstep-plist.svg?branch=master)](https://travis-ci.org/fonttools/openstep-plist)
-[![Appveyor Build status](https://ci.appveyor.com/api/projects/status/ix232hvkg45b95he?svg=true)](https://ci.appveyor.com/project/fonttools/openstep-plist)
+[![Githun CI Status](https://github.com/fonttools/skia-pathops/workflows/Wheels/badge.svg)](https://github.com/fonttools/skia-pathops/actions?query=workflow%3A%22Build+%2B+Deploy%22)
 [![codecov](https://codecov.io/gh/fonttools/openstep-plist/branch/master/graph/badge.svg)](https://codecov.io/gh/fonttools/openstep-plist)
 [![PyPI](https://img.shields.io/pypi/v/openstep-plist.svg)](https://pypi.org/project/openstep-plist/)
 
