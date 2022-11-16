@@ -18,6 +18,7 @@ jobs:
         os: [ "ubuntu-latest", "windows-latest", "macos-latest" ]
     env:
       CIBW_ARCHS: auto64
+      CIBW_ARCHS_MACOS: "x86_64 universal2"
       # skip 3.6 on all platforms; skip pypy for windows
       CIBW_SKIP: cp36-* pp*-win_amd64
     steps:
