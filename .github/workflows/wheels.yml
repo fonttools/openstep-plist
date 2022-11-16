@@ -15,9 +15,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu-20.04", "windows-2019", "macos-11" ]
+        os: [ "ubuntu-latest", "windows-latest", "macos-latest" ]
     env:
       CIBW_ARCHS: auto64
+      CIBW_ARCHS_MACOS: "x86_64 universal2"
       # skip 3.6 on all platforms; skip pypy for windows
       CIBW_SKIP: cp36-* pp*-win_amd64
     steps:
@@ -27,7 +28,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v2
         with:
-          python-version: 3.9
+          python-version: "3.10"
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel
       - name: Build wheels
