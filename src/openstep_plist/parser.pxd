@@ -5,9 +5,9 @@ from libcpp.vector cimport vector
 
 
 ctypedef struct ParseInfo:
-    const Py_UNICODE *begin
-    const Py_UNICODE *curr
-    const Py_UNICODE *end
+    const Py_UCS4 *begin
+    const Py_UCS4 *curr
+    const Py_UCS4 *end
     void *dict_type
     bint use_numbers
 
@@ -22,10 +22,10 @@ cdef uint32_t line_number_strings(ParseInfo *pi)
 cdef bint advance_to_non_space(ParseInfo *pi)
 
 
-cdef Py_UNICODE get_slashed_char(ParseInfo *pi)
+cdef Py_UCS4 get_slashed_char(ParseInfo *pi)
 
 
-cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote)
+cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UCS4 quote)
 
 
 cdef enum UnquotedType:
@@ -34,7 +34,7 @@ cdef enum UnquotedType:
     UNQUOTED_FLOAT = 2
 
 
-cdef UnquotedType get_unquoted_string_type(const Py_UNICODE *buf, Py_ssize_t length)
+cdef UnquotedType get_unquoted_string_type(const Py_UCS4 *buf, Py_ssize_t length)
 
 
 cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=*)
