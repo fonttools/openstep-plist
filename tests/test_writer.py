@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 import openstep_plist
-from openstep_plist.writer import Writer
-from openstep_plist._test import string_needs_quotes
+from openstep_plist.writer import Writer, string_needs_quotes
 from io import StringIO, BytesIO
 from collections import OrderedDict
 import string

@@ -8,6 +8,9 @@ from cpython.unicode cimport (
     PyUnicode_FromKindAndData,
     PyUnicode_AsUCS4Copy,
     PyUnicode_GET_LENGTH,
+    PyUnicode_DATA,
+    PyUnicode_KIND,
+    PyUnicode_READ,
 )
 from cpython.bytes cimport PyBytes_GET_SIZE
 from cpython.object cimport Py_SIZE
@@ -56,7 +59,8 @@ cdef bint *VALID_UNQUOTED_CHARS = [
 ]
 
 
-cdef bint string_needs_quotes(const Py_UCS4 *a, Py_ssize_t length):
+cpdef bint string_needs_quotes(unicode a):
+    cdef Py_ssize_t length = len(a)
     # empty string is always quoted
     if length == 0:
         return True
@@ -198,7 +202,17 @@ cdef class Writer:
                 f"Object of type {type(obj).__name__} is not PLIST serializable"
             )
 
-    cdef Py_ssize_t write_quoted_string(
+    cdef Py_ssize_t write_quoted_string(self, unicode string) except -1:
+        cdef Py_ssize_t length = PyUnicode_GET_LENGTH(string)
+        cdef Py_UCS4 *s = PyUnicode_AsUCS4Copy(string)
+        if not s:
+            raise MemoryError()
+        try:
+            return self._write_quoted_string(s, length)
+        finally:
+            PyMem_Free(s)
+
+    cdef Py_ssize_t _write_quoted_string(
         self, const Py_UCS4 *s, Py_ssize_t length
     ) except -1:
 
@@ -297,55 +311,40 @@ cdef class Writer:
         return new_length + 2
 
     cdef inline Py_ssize_t write_unquoted_string(self, unicode string) except -1:
-        cdef:
-            Py_ssize_t length = PyUnicode_GET_LENGTH(string)
-            Py_UCS4 *s = PyUnicode_AsUCS4Copy(string)
-        if not s:
-            raise MemoryError()
-        try:
-            return self.extend_buffer(s, length)
-        finally:
-            PyMem_Free(s)
+        cdef int kind = PyUnicode_KIND(string)
+        cdef Py_UCS4 ch
+        cdef Py_ssize_t i, length = PyUnicode_GET_LENGTH(string)
+        cdef void *data = PyUnicode_DATA(string)
+        self.dest.reserve(self.dest.size() + length)
+        for i in range(length):
+            ch = PyUnicode_READ(kind, data, i)
+            self.dest.push_back(ch)
+        return length
 
     cdef Py_ssize_t write_string(self, unicode string) except -1:
-        cdef:
-            Py_ssize_t length = PyUnicode_GET_LENGTH(string)
-            Py_UCS4 *s = PyUnicode_AsUCS4Copy(string)
-        if not s:
-            raise MemoryError()
-        try:
-            if string_needs_quotes(s, length):
-                return self.write_quoted_string(s, length)
-            else:
-                return self.extend_buffer(s, length)
-        finally:
-            PyMem_Free(s)
+        if string_needs_quotes(string):
+            return self.write_quoted_string(string)
+        else:
+            return self.write_unquoted_string(string)
 
     cdef Py_ssize_t write_short_float_repr(self, object py_float) except -1:
         cdef:
             unicode string = f"{py_float:.{self.float_precision}f}"
             Py_ssize_t length = PyUnicode_GET_LENGTH(string)
             Py_UCS4 ch
-            Py_UCS4 *s = PyUnicode_AsUCS4Copy(string)
 
-        if not s:
-            raise MemoryError()
+        # read digits backwards, skipping all the '0's until either a
+        # non-'0' or '.' is found
+        while length > 0:
+            ch = string[length-1]
+            if ch == c'.':
+                length -= 1  # skip the trailing dot
+                break
+            elif ch != c'0':
+                break
+            length -= 1
 
-        try:
-            # read digits backwards, skipping all the '0's until either a
-            # non-'0' or '.' is found
-            while length > 0:
-                ch = s[length-1]
-                if ch == c'.':
-                    length -= 1  # skip the trailing dot
-                    break
-                elif ch != c'0':
-                    break
-                length -= 1
-
-            return self.extend_buffer(s, length)
-        finally:
-            PyMem_Free(s)
+        return self.write_unquoted_string(string[:length])
 
     cdef Py_ssize_t write_data(self, bytes data) except -1:
         cdef:
