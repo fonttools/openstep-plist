@@ -11,8 +11,6 @@ from cpython.unicode cimport (
 )
 from cpython.bytes cimport PyBytes_GET_SIZE
 from cpython.object cimport Py_SIZE
-from libcpp.algorithm cimport copy
-from libcpp.iterator cimport back_inserter
 from libcpp.vector cimport vector
 from libc.stdint cimport uint16_t
 cimport cython
@@ -163,7 +161,7 @@ cdef class Writer:
         self, const Py_UNICODE *s, Py_ssize_t length
     ) except +:
         self.dest.reserve(self.dest.size() + length)
-        copy(s, s + length, back_inserter(self.dest[0]))
+        self.dest.insert(self.dest.end(), s, s + length)
         return length
 
     cdef inline unicode _getvalue(self):
