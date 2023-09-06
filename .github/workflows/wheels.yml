@@ -21,9 +21,9 @@ jobs:
       CIBW_ARCHS_MACOS: "x86_64 universal2"
       # Skip
       #
-      # * Python 3.6 on all platforms,
+      # * Python 3.6 and 3.7 on all platforms,
       # * PyPy on Windows.
-      CIBW_SKIP: cp36-* pp*-win_amd64
+      CIBW_SKIP: cp36-* cp37-* pp*-win_amd64
     steps:
       - uses: actions/checkout@v2
         with:

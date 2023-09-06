@@ -130,6 +130,7 @@ setup_args = dict(
     include_package_data=True,
     ext_modules=extensions,
     setup_requires=["setuptools_scm"] + wheel,
+    python_requires=">=3.8",
     cmdclass={"build_ext": cython_build_ext, "sdist": cython_sdist},
     zip_safe=False,
 )
