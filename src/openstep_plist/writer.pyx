@@ -3,14 +3,18 @@
 
 from collections import OrderedDict
 from cpython.unicode cimport (
-    PyUnicode_FromUnicode,
-    PyUnicode_AS_UNICODE,
-    PyUnicode_AS_DATA,
-    PyUnicode_GET_SIZE,
     PyUnicode_AsUTF8String,
+    PyUnicode_4BYTE_KIND,
+    PyUnicode_FromKindAndData,
+    PyUnicode_AsUCS4Copy,
+    PyUnicode_GET_LENGTH,
+    PyUnicode_DATA,
+    PyUnicode_KIND,
+    PyUnicode_READ,
 )
 from cpython.bytes cimport PyBytes_GET_SIZE
 from cpython.object cimport Py_SIZE
+from cpython.mem cimport PyMem_Free
 from libcpp.vector cimport vector
 from libc.stdint cimport uint16_t
 cimport cython
@@ -19,20 +23,19 @@ from .util cimport (
     tounicode,
     isdigit,
     isprint,
-    PY_NARROW_UNICODE,
     high_surrogate_from_unicode_scalar,
     low_surrogate_from_unicode_scalar,
 )
 
 
-cdef Py_UNICODE *HEX_MAP = [
+cdef Py_UCS4 *HEX_MAP = [
     c'0', c'1', c'2', c'3', c'4', c'5', c'6', c'7',
     c'8', c'9', c'A', c'B', c'C', c'D', c'E', c'F',
 ]
 
-cdef Py_UNICODE *ARRAY_SEP_NO_INDENT = [c',', c' ']
-cdef Py_UNICODE *DICT_KEY_VALUE_SEP = [c' ', c'=', c' ']
-cdef Py_UNICODE *DICT_ITEM_SEP_NO_INDENT = [c';', c' ']
+cdef Py_UCS4 *ARRAY_SEP_NO_INDENT = [c',', c' ']
+cdef Py_UCS4 *DICT_KEY_VALUE_SEP = [c' ', c'=', c' ']
+cdef Py_UCS4 *DICT_ITEM_SEP_NO_INDENT = [c';', c' ']
 
 
 # this table includes A-Z, a-z, 0-9, '.', '_' and '$'
@@ -56,14 +59,15 @@ cdef bint *VALID_UNQUOTED_CHARS = [
 ]
 
 
-cdef bint string_needs_quotes(const Py_UNICODE *a, Py_ssize_t length):
+cpdef bint string_needs_quotes(unicode a):
+    cdef Py_ssize_t length = len(a)
     # empty string is always quoted
     if length == 0:
         return True
 
     cdef:
         Py_ssize_t i
-        Py_UNICODE ch
+        Py_UCS4 ch
         bint is_number = True
         bint seen_period = False
 
@@ -91,8 +95,8 @@ cdef bint string_needs_quotes(const Py_UNICODE *a, Py_ssize_t length):
     return is_number
 
 
-cdef inline void escape_unicode(uint16_t ch, Py_UNICODE *dest):
-    # caller must ensure 'dest' has rooms for 6 more Py_UNICODE
+cdef inline void escape_unicode(uint16_t ch, Py_UCS4 *dest):
+    # caller must ensure 'dest' has rooms for 6 more Py_UCS4
     dest[0] = c'\\'
     dest[1] = c'U'
     dest[5] = (ch & 15) + 55 if (ch & 15) > 9 else (ch & 15) + 48
@@ -107,7 +111,7 @@ cdef inline void escape_unicode(uint16_t ch, Py_UNICODE *dest):
 @cython.final
 cdef class Writer:
 
-    cdef vector[Py_UNICODE] *dest
+    cdef vector[Py_UCS4] *dest
     cdef bint unicode_escape
     cdef int float_precision
     cdef unicode indent
@@ -121,7 +125,7 @@ cdef class Writer:
         indent=None,
         bint single_line_tuples=False,
     ):
-        self.dest = new vector[Py_UNICODE]()
+        self.dest = new vector[Py_UCS4]()
         self.unicode_escape = unicode_escape
         self.float_precision = float_precision
 
@@ -158,15 +162,17 @@ cdef class Writer:
         return self.write_object(obj)
 
     cdef inline Py_ssize_t extend_buffer(
-        self, const Py_UNICODE *s, Py_ssize_t length
-    ) except +:
+        self, const Py_UCS4 *s, Py_ssize_t length
+    ) except -1:
         self.dest.reserve(self.dest.size() + length)
         self.dest.insert(self.dest.end(), s, s + length)
         return length
 
     cdef inline unicode _getvalue(self):
-        return PyUnicode_FromUnicode(
-            <const Py_UNICODE*>self.dest.const_data(), self.dest.size()
+        return PyUnicode_FromKindAndData(
+            PyUnicode_4BYTE_KIND,
+            self.dest.const_data(),
+            self.dest.size()
         )
 
     cdef Py_ssize_t write_object(self, object obj) except -1:
@@ -196,16 +202,26 @@ cdef class Writer:
                 f"Object of type {type(obj).__name__} is not PLIST serializable"
             )
 
-    cdef Py_ssize_t write_quoted_string(
-        self, const Py_UNICODE *s, Py_ssize_t length
+    cdef Py_ssize_t write_quoted_string(self, unicode string) except -1:
+        cdef Py_ssize_t length = PyUnicode_GET_LENGTH(string)
+        cdef Py_UCS4 *s = PyUnicode_AsUCS4Copy(string)
+        if not s:
+            raise MemoryError()
+        try:
+            return self._write_quoted_string(s, length)
+        finally:
+            PyMem_Free(s)
+
+    cdef Py_ssize_t _write_quoted_string(
+        self, const Py_UCS4 *s, Py_ssize_t length
     ) except -1:
 
         cdef:
-            vector[Py_UNICODE] *dest = self.dest
+            vector[Py_UCS4] *dest = self.dest
             bint unicode_escape = self.unicode_escape
-            const Py_UNICODE *curr = s
-            const Py_UNICODE *end = &s[length]
-            Py_UNICODE *ptr
+            const Py_UCS4 *curr = s
+            const Py_UCS4 *end = &s[length]
+            Py_UCS4 *ptr
             unsigned long ch
             Py_ssize_t base_length = dest.size()
             Py_ssize_t new_length = 0
@@ -226,7 +242,7 @@ cdef class Writer:
                     else:
                         new_length += 4
                 elif unicode_escape:
-                    if ch > 0xFFFF and not PY_NARROW_UNICODE:
+                    if ch > 0xFFFF:
                         new_length += 12
                     else:
                         new_length += 6
@@ -235,7 +251,7 @@ cdef class Writer:
             curr += 1
 
         dest.resize(base_length + new_length + 2)
-        ptr = <Py_UNICODE*>dest.data() + base_length
+        ptr = <Py_UCS4*>dest.data() + base_length
         ptr[0] = '"'
         ptr += 1
 
@@ -276,7 +292,7 @@ cdef class Writer:
                         ptr[0] = (ch & 7) + c'0'
                         ptr += 3
                 elif unicode_escape:
-                    if ch > 0xFFFF and not PY_NARROW_UNICODE:
+                    if ch > 0xFFFF:
                         escape_unicode(high_surrogate_from_unicode_scalar(ch), ptr)
                         ptr += 6
                         escape_unicode(low_surrogate_from_unicode_scalar(ch), ptr)
@@ -295,33 +311,32 @@ cdef class Writer:
         return new_length + 2
 
     cdef inline Py_ssize_t write_unquoted_string(self, unicode string) except -1:
-        cdef:
-            const Py_UNICODE *s = PyUnicode_AS_UNICODE(string)
-            Py_ssize_t length = PyUnicode_GET_SIZE(string)
-
-        return self.extend_buffer(s, length)
+        cdef int kind = PyUnicode_KIND(string)
+        cdef Py_UCS4 ch
+        cdef Py_ssize_t i, length = PyUnicode_GET_LENGTH(string)
+        cdef void *data = PyUnicode_DATA(string)
+        self.dest.reserve(self.dest.size() + length)
+        for i in range(length):
+            ch = PyUnicode_READ(kind, data, i)
+            self.dest.push_back(ch)
+        return length
 
     cdef Py_ssize_t write_string(self, unicode string) except -1:
-        cdef:
-            const Py_UNICODE *s = PyUnicode_AS_UNICODE(string)
-            Py_ssize_t length = PyUnicode_GET_SIZE(string)
-
-        if string_needs_quotes(s, length):
-            return self.write_quoted_string(s, length)
+        if string_needs_quotes(string):
+            return self.write_quoted_string(string)
         else:
-            return self.extend_buffer(s, length)
+            return self.write_unquoted_string(string)
 
     cdef Py_ssize_t write_short_float_repr(self, object py_float) except -1:
         cdef:
             unicode string = f"{py_float:.{self.float_precision}f}"
-            const Py_UNICODE *s = PyUnicode_AS_UNICODE(string)
-            Py_ssize_t length = PyUnicode_GET_SIZE(string)
-            Py_UNICODE ch
+            Py_ssize_t length = PyUnicode_GET_LENGTH(string)
+            Py_UCS4 ch
 
         # read digits backwards, skipping all the '0's until either a
         # non-'0' or '.' is found
         while length > 0:
-            ch = s[length-1]
+            ch = string[length-1]
             if ch == c'.':
                 length -= 1  # skip the trailing dot
                 break
@@ -329,13 +344,13 @@ cdef class Writer:
                 break
             length -= 1
 
-        return self.extend_buffer(s, length)
+        return self.write_unquoted_string(string[:length])
 
     cdef Py_ssize_t write_data(self, bytes data) except -1:
         cdef:
-            vector[Py_UNICODE] *dest = self.dest
+            vector[Py_UCS4] *dest = self.dest
             const unsigned char *src = data
-            Py_UNICODE *ptr
+            Py_UCS4 *ptr
             Py_ssize_t length = PyBytes_GET_SIZE(data)
             Py_ssize_t extra_length, i, j
 
@@ -346,7 +361,7 @@ cdef class Writer:
 
         j = dest.size()
         dest.resize(j + extra_length)
-        ptr = <Py_UNICODE*>dest.data()
+        ptr = <Py_UCS4*>dest.data()
 
         ptr[j] = c'<'
         j += 1
@@ -375,7 +390,7 @@ cdef class Writer:
             Py_ssize_t last
             Py_ssize_t count
             Py_ssize_t i
-            vector[Py_UNICODE] *dest = self.dest
+            vector[Py_UCS4] *dest = self.dest
             unicode indent, newline_indent = ""
 
         if length == 0:
@@ -420,7 +435,7 @@ cdef class Writer:
             Py_ssize_t last
             Py_ssize_t count
             Py_ssize_t i
-            vector[Py_UNICODE] *dest = self.dest
+            vector[Py_UCS4] *dest = self.dest
             unicode indent, newline_indent = ""
 
         if length == 0:
@@ -464,7 +479,7 @@ cdef class Writer:
         cdef:
             unicode indent
             unicode newline_indent = ""
-            vector[Py_UNICODE] *dest = self.dest
+            vector[Py_UCS4] *dest = self.dest
             Py_ssize_t last, count, i
 
         if not d:
@@ -519,7 +534,7 @@ cdef class Writer:
         cdef:
             unicode indent
             unicode newline_indent = ""
-            vector[Py_UNICODE] *dest = self.dest
+            vector[Py_UCS4] *dest = self.dest
             Py_ssize_t last, count, i
 
         if not d:

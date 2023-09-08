@@ -2,8 +2,10 @@
 #distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
 from cpython.bytes cimport PyBytes_FromStringAndSize
+from cpython.mem cimport PyMem_Free
 from cpython.unicode cimport (
-    PyUnicode_FromUnicode, PyUnicode_AS_UNICODE, PyUnicode_GET_SIZE,
+    PyUnicode_4BYTE_KIND, PyUnicode_FromKindAndData, PyUnicode_AsUCS4Copy,
+    PyUnicode_GET_LENGTH,
 )
 from libc.stdint cimport uint8_t, uint16_t, uint32_t
 from libcpp.algorithm cimport copy
@@ -18,7 +20,6 @@ from .util cimport (
     is_valid_unquoted_string_char,
     isdigit,
     isxdigit,
-    PY_NARROW_UNICODE,
     is_high_surrogate,
     is_low_surrogate,
     unicode_scalar_from_surrogates,
@@ -27,7 +28,7 @@ from .util cimport (
 
 cdef uint32_t line_number_strings(ParseInfo *pi):
     # warning: doesn't have a good idea of Unicode line separators
-    cdef const Py_UNICODE *p = pi.begin
+    cdef const Py_UCS4 *p = pi.begin
     cdef uint32_t count = 1
     while p < pi.curr:
         if p[0] == c'\r':
@@ -44,7 +45,7 @@ cdef bint advance_to_non_space(ParseInfo *pi):
     """Returns true if the advance found something that's not whitespace
     before the end of the buffer, false otherwise.
     """
-    cdef Py_UNICODE ch2, ch3
+    cdef Py_UCS4 ch2, ch3
     while pi.curr < pi.end:
         ch2 = pi.curr[0]
         pi.curr += 1
@@ -109,8 +110,8 @@ cdef unsigned short* NEXT_STEP_DECODING_TABLE = [
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef Py_UNICODE get_slashed_char(ParseInfo *pi):
-    cdef Py_UNICODE result
+cdef Py_UCS4 get_slashed_char(ParseInfo *pi):
+    cdef Py_UCS4 result
     cdef uint8_t num
     cdef unsigned int codepoint, num_digits
     cdef unsigned long unum
@@ -180,12 +181,12 @@ cdef Py_UNICODE get_slashed_char(ParseInfo *pi):
     return ch
 
 
-cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
-    cdef vector[Py_UNICODE] string
-    cdef const Py_UNICODE *start_mark = pi.curr
-    cdef const Py_UNICODE *mark = pi.curr
-    cdef const Py_UNICODE *tmp
-    cdef Py_UNICODE ch, ch2
+cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UCS4 quote):
+    cdef vector[Py_UCS4] string
+    cdef const Py_UCS4 *start_mark = pi.curr
+    cdef const Py_UCS4 *mark = pi.curr
+    cdef const Py_UCS4 *tmp
+    cdef Py_UCS4 ch, ch2
     while pi.curr < pi.end:
         ch = pi.curr[0]
         if ch == quote:
@@ -201,7 +202,7 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
             # If we are on a "narrow" build, then the two code units already
             # represent a single codepoint internally.
             if (
-                not PY_NARROW_UNICODE and is_high_surrogate(ch)
+                is_high_surrogate(ch)
                 and pi.curr < pi.end and pi.curr[0] == c"\\"
             ):
                 tmp = pi.curr
@@ -228,7 +229,11 @@ cdef unicode parse_quoted_plist_string(ParseInfo *pi, Py_UNICODE quote):
     # Advance past the quote character before returning
     pi.curr += 1
 
-    return PyUnicode_FromUnicode(<const Py_UNICODE*>string.const_data(), string.size())
+    return PyUnicode_FromKindAndData(
+        PyUnicode_4BYTE_KIND,
+        string.const_data(),
+        string.size()
+    )
 
 
 def string_to_number(unicode s not None, bint required=True):
@@ -236,17 +241,22 @@ def string_to_number(unicode s not None, bint required=True):
     Raises ValueError if the string is not a number.
     """
     cdef:
-        Py_UNICODE c
-        Py_UNICODE* buf
-        Py_ssize_t length = PyUnicode_GET_SIZE(s)
+        Py_UCS4 c
+        Py_UCS4* buf
+        Py_ssize_t length = PyUnicode_GET_LENGTH(s)
 
     if length:
-        buf = PyUnicode_AS_UNICODE(s)
-        kind = get_unquoted_string_type(buf, length)
-        if kind == UNQUOTED_FLOAT:
-            return float(s)
-        elif kind == UNQUOTED_INTEGER:
-            return int(s)
+        buf = PyUnicode_AsUCS4Copy(s)
+        if not buf:
+            raise MemoryError()
+        try:
+            kind = get_unquoted_string_type(buf, length)
+            if kind == UNQUOTED_FLOAT:
+                return float(s)
+            elif kind == UNQUOTED_INTEGER:
+                return int(s)
+        finally:
+            PyMem_Free(buf)
 
     if required:
         raise ValueError(f"Could not convert string to float or int: {s!r}")
@@ -255,9 +265,9 @@ def string_to_number(unicode s not None, bint required=True):
 
 
 cdef UnquotedType get_unquoted_string_type(
-    const Py_UNICODE *buf, Py_ssize_t length
+    const Py_UCS4 *buf, Py_ssize_t length
 ):
-    """Check if Py_UNICODE array starts with a digit, or '-' followed
+    """Check if Py_UCS4 array starts with a digit, or '-' followed
     by a digit, and if it contains a decimal point '.'.
     Return 0 if string cannot contain a number, 1 if it contains an
     integer, and 2 if it contains a float.
@@ -268,8 +278,8 @@ cdef UnquotedType get_unquoted_string_type(
         bint maybe_number = True
         bint is_float = False
         int i = 0
-        # deref here is safe since Py_UNICODE* are NULL-terminated
-        Py_UNICODE ch = buf[i]
+        # deref here is safe since Py_UCS4* are NULL-terminated
+        Py_UCS4 ch = buf[i]
 
     if ch == c'-':
         if length > 1:
@@ -301,8 +311,8 @@ cdef UnquotedType get_unquoted_string_type(
 
 cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=False):
     cdef:
-        const Py_UNICODE *mark = pi.curr
-        Py_UNICODE ch
+        const Py_UCS4 *mark = pi.curr
+        Py_UCS4 ch
         Py_ssize_t length, i
         unicode s
         UnquotedType kind
@@ -315,7 +325,7 @@ cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=False)
             break
     if pi.curr != mark:
         length = pi.curr - mark
-        s = PyUnicode_FromUnicode(mark, length)
+        s = PyUnicode_FromKindAndData(PyUnicode_4BYTE_KIND, <const void *>mark, length)
 
         if not ensure_string and pi.use_numbers:
             kind = get_unquoted_string_type(mark, length)
@@ -330,7 +340,7 @@ cdef object parse_unquoted_plist_string(ParseInfo *pi, bint ensure_string=False)
 
 
 cdef unicode parse_plist_string(ParseInfo *pi, bint required=True):
-    cdef Py_UNICODE ch
+    cdef Py_UCS4 ch
     if not advance_to_non_space(pi):
         if required:
             raise ParseError("Unexpected EOF while parsing string")
@@ -437,7 +447,7 @@ cdef inline unsigned char from_hex_digit(unsigned char ch):
 cdef int get_data_bytes(ParseInfo *pi, vector[unsigned char]& result) except -1:
     cdef unsigned char first, second
     cdef int num_bytes_read = 0
-    cdef Py_UNICODE ch1, ch2
+    cdef Py_UCS4 ch1, ch2
     while pi.curr < pi.end:
         ch1 = pi.curr[0]
         if ch1 == c'>':
@@ -495,7 +505,7 @@ cdef bytes parse_plist_data(ParseInfo *pi):
 
 
 cdef object parse_plist_object(ParseInfo *pi, bint required=True):
-    cdef Py_UNICODE ch
+    cdef Py_UCS4 ch
     if not advance_to_non_space(pi):
         if required:
             raise ParseError("Unexpected EOF while parsing plist")
@@ -523,8 +533,12 @@ cdef object parse_plist_object(ParseInfo *pi, bint required=True):
 
 def loads(string, dict_type=dict, bint use_numbers=False):
     cdef unicode s = tounicode(string)
-    cdef Py_ssize_t length = PyUnicode_GET_SIZE(s)
-    cdef Py_UNICODE* buf = PyUnicode_AS_UNICODE(s)
+    cdef Py_ssize_t length = PyUnicode_GET_LENGTH(s)
+    cdef const Py_UCS4 *begin
+    cdef object result = None
+    cdef Py_UCS4* buf = PyUnicode_AsUCS4Copy(s)
+    if not buf:
+        raise MemoryError()
 
     cdef ParseInfo pi = ParseInfo(
         begin=buf,
@@ -534,25 +548,27 @@ def loads(string, dict_type=dict, bint use_numbers=False):
         use_numbers=use_numbers,
     )
 
-    cdef const Py_UNICODE *begin = pi.curr
-    cdef object result = None
-    if not advance_to_non_space(&pi):
-        # a file consisting of only whitespace or empty is defined as an
-        # empty dictionary
-        result = {}
-    else:
-        result = parse_plist_object(&pi, required=True)
-        if result:
-            if advance_to_non_space(&pi):
-                if not isinstance(result, unicode):
-                    raise ParseError(
-                        "Junk after plist at line %d" % line_number_strings(&pi)
-                    )
-                else:
-                    # keep parsing for a 'strings resource' file: it looks like
-                    # a dictionary without the opening/closing curly braces
-                    pi.curr = begin
-                    result = parse_plist_dict_content(&pi)
+    try:
+        begin = pi.curr
+        if not advance_to_non_space(&pi):
+            # a file consisting of only whitespace or empty is defined as an
+            # empty dictionary
+            result = {}
+        else:
+            result = parse_plist_object(&pi, required=True)
+            if result:
+                if advance_to_non_space(&pi):
+                    if not isinstance(result, unicode):
+                        raise ParseError(
+                            "Junk after plist at line %d" % line_number_strings(&pi)
+                        )
+                    else:
+                        # keep parsing for a 'strings resource' file: it looks like
+                        # a dictionary without the opening/closing curly braces
+                        pi.curr = begin
+                        result = parse_plist_dict_content(&pi)
+    finally:
+        PyMem_Free(buf)
 
     return result
 

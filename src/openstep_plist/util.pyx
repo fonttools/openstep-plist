@@ -26,7 +26,7 @@ cdef inline object tostr(s, encoding="ascii", errors="strict"):
         raise TypeError(f"Could not convert to str: {s!r}")
 
 
-cdef inline bint is_valid_unquoted_string_char(Py_UNICODE x):
+cdef inline bint is_valid_unquoted_string_char(Py_UCS4 x):
     return (
         (x >= c'a' and x <= c'z') or
         (x >= c'A' and x <= c'Z') or
@@ -38,9 +38,6 @@ cdef inline bint is_valid_unquoted_string_char(Py_UNICODE x):
         x == c'.' or
         x == c'-'
     )
-
-
-cdef bint PY_NARROW_UNICODE = sizeof(Py_UNICODE) != 4
 
 
 cdef inline bint is_high_surrogate(uint32_t ch):

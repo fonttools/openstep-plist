@@ -14,7 +14,7 @@ needs_wheel = {"bdist_wheel"}.intersection(argv)
 wheel = ["wheel"] if needs_wheel else []
 
 # check if minimum required Cython is available
-cython_version_re = re.compile('\s*"cython\s*>=\s*([0-9][0-9\w\.]*)\s*"')
+cython_version_re = re.compile(r'\s*"cython\s*>=\s*([0-9][0-9\w\.]*)\s*"')
 with open("pyproject.toml", "r", encoding="utf-8") as fp:
     for line in fp:
         m = cython_version_re.match(line)
@@ -61,7 +61,7 @@ class cython_build_ext(_build_ext):
                 "%s not installed; using pre-generated *.c sources" % required_cython
             )
             for ext in self.distribution.ext_modules:
-                ext.sources = [re.sub("\.pyx$", ".c", n) for n in ext.sources]
+                ext.sources = [re.sub(r"\.pyx$", ".c", n) for n in ext.sources]
 
         _build_ext.finalize_options(self)
 
@@ -130,6 +130,7 @@ setup_args = dict(
     include_package_data=True,
     ext_modules=extensions,
     setup_requires=["setuptools_scm"] + wheel,
+    python_requires=">=3.8",
     cmdclass={"build_ext": cython_build_ext, "sdist": cython_sdist},
     zip_safe=False,
 )

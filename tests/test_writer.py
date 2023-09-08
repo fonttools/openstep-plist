@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 import openstep_plist
-from openstep_plist.writer import Writer
-from openstep_plist._test import is_narrow_unicode, string_needs_quotes
+from openstep_plist.writer import Writer, string_needs_quotes
 from io import StringIO, BytesIO
 from collections import OrderedDict
 import string
@@ -64,7 +63,7 @@ class TestWriter(object):
         assert w.getvalue() == '"\u0410"'
 
         w = Writer(unicode_escape=False)
-        assert w.write("\U0001F4A9") == (4 if is_narrow_unicode() else 3)
+        assert w.write("\U0001F4A9") == 3
         assert w.getvalue() == '"\U0001F4A9"'
 
     @pytest.mark.parametrize(

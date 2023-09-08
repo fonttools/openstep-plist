@@ -15,10 +15,7 @@ cdef unicode tounicode(s, encoding=*, errors=*)
 cdef tostr(s, encoding=*, errors=*)
 
 
-cdef bint is_valid_unquoted_string_char(Py_UNICODE x)
-
-
-cdef bint PY_NARROW_UNICODE
+cdef bint is_valid_unquoted_string_char(Py_UCS4 x)
 
 
 cdef bint is_high_surrogate(uint32_t ch)

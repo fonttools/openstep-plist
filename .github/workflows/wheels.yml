@@ -21,12 +21,9 @@ jobs:
       CIBW_ARCHS_MACOS: "x86_64 universal2"
       # Skip
       #
-      # * Python 3.6 on all platforms,
-      # * Python 3.12 on all platforms, and
+      # * Python 3.6 and 3.7 on all platforms,
       # * PyPy on Windows.
-      #
-      # TODO: Activate Python 3.12 when issue 18 is resolved.
-      CIBW_SKIP: cp36-* cp312-* pp*-win_amd64
+      CIBW_SKIP: cp36-* cp37-* pp*-win_amd64
     steps:
       - uses: actions/checkout@v2
         with:
