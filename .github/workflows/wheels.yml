@@ -136,4 +136,4 @@ jobs:
           echo "DEBUG: This is a final release"
         fi
         python setup.py sdist
-        twine upload dist/wheels-*/*.whl dist/*.zip
+        twine upload dist/wheels-*/*.whl dist/*.tar.gz
