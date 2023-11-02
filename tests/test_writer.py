@@ -4,6 +4,7 @@ import openstep_plist
 from openstep_plist.writer import Writer, string_needs_quotes
 from io import StringIO, BytesIO
 from collections import OrderedDict
+from textwrap import dedent
 import string
 import random
 import pytest
@@ -56,6 +57,11 @@ class TestWriter(object):
         w = Writer()
         w.write(string)
         assert w.getvalue() == expected
+
+    def test_quoted_string_dont_escape_newlines(self):
+        w = Writer(escape_newlines=False)
+        w.write("a\n\n\nbc")
+        assert w.getvalue() == '"a\n\n\nbc"'
 
     def test_quoted_string_no_unicode_escape(self):
         w = Writer(unicode_escape=False)
@@ -211,17 +217,36 @@ def test_dumps():
         '{a = 1; b = 3; "c d" = (33, 44); '
         "e = (<66676869 6C6D6E6F>, <70717273 7475767A>);}"
     )
+    assert openstep_plist.dumps(
+        {
+            "features": dedent(
+                """\
+                sub periodcentered by periodcentered.case;
+                sub bullet by bullet.case;
+                """
+            ),
+        },
+        escape_newlines=False,
+    ) == (
+        '{features = "sub periodcentered by periodcentered.case;\n'
+        'sub bullet by bullet.case;\n'
+        '";}'
+    )
 
 
 def test_dump():
-    plist = [1, b"2", {3: (4, "5", "\U0001F4A9")}]
+    plist = [1, b"2", {3: (4, "5\n6", "\U0001F4A9")}]
     fp = StringIO()
     openstep_plist.dump(plist, fp)
-    assert fp.getvalue() == '(1, <32>, {"3" = (4, "5", "\\UD83D\\UDCA9");})'
+    assert fp.getvalue() == '(1, <32>, {"3" = (4, "5\\n6", "\\UD83D\\UDCA9");})'
 
     fp = BytesIO()
     openstep_plist.dump(plist, fp, unicode_escape=False)
-    assert fp.getvalue() == b'(1, <32>, {"3" = (4, "5", "\xf0\x9f\x92\xa9");})'
+    assert fp.getvalue() == b'(1, <32>, {"3" = (4, "5\\n6", "\xf0\x9f\x92\xa9");})'
+
+    fp = BytesIO()
+    openstep_plist.dump(plist, fp, escape_newlines=False, unicode_escape=False)
+    assert fp.getvalue() == b'(1, <32>, {"3" = (4, "5\n6", "\xf0\x9f\x92\xa9");})'
 
     with pytest.raises(AttributeError):
         openstep_plist.dump(plist, object())
