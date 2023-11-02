@@ -117,6 +117,7 @@ cdef class Writer:
     cdef unicode indent
     cdef int current_indent_level
     cdef bint single_line_tuples
+    cdef bint escape_newlines
 
     def __cinit__(
         self,
@@ -124,10 +125,12 @@ cdef class Writer:
         int float_precision=6,
         indent=None,
         bint single_line_tuples=False,
+        bint escape_newlines=True,
     ):
         self.dest = new vector[Py_UCS4]()
         self.unicode_escape = unicode_escape
         self.float_precision = float_precision
+        self.escape_newlines = escape_newlines
 
         if indent is not None:
             if isinstance(indent, basestring):
@@ -225,14 +228,17 @@ cdef class Writer:
             unsigned long ch
             Py_ssize_t base_length = dest.size()
             Py_ssize_t new_length = 0
+            bint escape_newlines = self.escape_newlines
 
         while curr < end:
             ch = curr[0]
-            if ch == c'\t' or ch == c' ':
+            if ch == c'\t' or ch == c' ' or (ch == c'\n' and not escape_newlines):
                 new_length += 1
             elif (
-                ch == c'\n' or ch == c'\\' or ch == c'"' or ch == c'\a'
+                ch == c'\\' or ch == c'"' or ch == c'\a'
                 or ch == c'\b' or ch == c'\v' or ch == c'\f' or ch == c'\r'
+            ) or (
+                ch == c'\n' and escape_newlines
             ):
                 new_length += 2
             else:
@@ -258,10 +264,10 @@ cdef class Writer:
         curr = s
         while curr < end:
             ch = curr[0]
-            if ch == c'\t' or ch == c' ':
+            if ch == c'\t' or ch == c' ' or (ch == c'\n' and not escape_newlines):
                 ptr[0] = ch
                 ptr += 1
-            elif ch == c'\n':
+            elif ch == c'\n' and escape_newlines:
                 ptr[0] = c'\\'; ptr[1] = c'n'; ptr += 2
             elif ch == c'\a':
                 ptr[0] = c'\\'; ptr[1] = c'a'; ptr += 2
@@ -584,24 +590,26 @@ cdef class Writer:
 
 
 def dumps(obj, bint unicode_escape=True, int float_precision=6, indent=None,
-          single_line_tuples=False):
+          bint single_line_tuples=False, bint escape_newlines=True):
     w = Writer(
         unicode_escape=unicode_escape,
         float_precision=float_precision,
         indent=indent,
         single_line_tuples=single_line_tuples,
+        escape_newlines=escape_newlines,
     )
     w.write(obj)
     return w.getvalue()
 
 
 def dump(obj, fp, bint unicode_escape=True, int float_precision=6, indent=None,
-         single_line_tuples=False):
+         bint single_line_tuples=False, bint escape_newlines=True):
     w = Writer(
         unicode_escape=unicode_escape,
         float_precision=float_precision,
         indent=indent,
         single_line_tuples=single_line_tuples,
+        escape_newlines=escape_newlines,
     )
     w.write(obj)
     w.dump(fp)

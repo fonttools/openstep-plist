@@ -37,6 +37,9 @@ def main(args=None):
         "-j", "--json", help="use json to serialize", action="store_true", default=False
     )
     parser.add_argument("-i", "--indent", help="indentation level", type=int, default=2)
+    parser.add_argument(
+        "--no-escape-newlines", dest="escape_newlines", action="store_false"
+    )
     args = parser.parse_args(args)
 
     if not args.glyphs:
@@ -58,7 +61,11 @@ def main(args=None):
         if args.glyphs:
             from glyphsLib.writer import dump
         else:
-            dump = partial(openstep_plist.dump, indent=args.indent)
+            dump = partial(
+                openstep_plist.dump,
+                indent=args.indent,
+                escape_newlines=args.escape_newlines,
+            )
 
     with open(args.infile, "r", encoding="utf-8") as fp:
         data = parse(fp)
