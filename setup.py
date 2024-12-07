@@ -128,6 +128,7 @@ setup_args = dict(
     package_dir={"": "src"},
     packages=find_packages("src"),
     include_package_data=True,
+    exclude_package_data={"": ["*.cpp"]},
     ext_modules=extensions,
     setup_requires=["setuptools_scm"] + wheel,
     python_requires=">=3.8",
