@@ -315,3 +315,12 @@ b = (2, 3);
 c = Hello;
 }"""
     )
+
+
+def test_sort_keys():
+    plist = {"c": 1, "b": {"z": 9, "y": 8, "x": 7}, "a": "Hello"}
+    sorted_result = "{a = Hello; b = {x = 7; y = 8; z = 9;}; c = 1;}"
+    unsorted_result = "{c = 1; b = {z = 9; y = 8; x = 7;}; a = Hello;}"
+    assert openstep_plist.dumps(plist) == sorted_result
+    assert openstep_plist.dumps(plist, sort_keys=True) == sorted_result
+    assert openstep_plist.dumps(plist, sort_keys=False) == unsorted_result
