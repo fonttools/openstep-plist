@@ -469,9 +469,6 @@ cdef class Writer:
                     count += self.extend_buffer(ARRAY_SEP_NO_INDENT, 2)
                 else:
                     dest.push_back(c',')
-                    if self.single_line_tuples:
-                        dest.push_back(c' ')
-                        count += 1
                     count += 1 + self.write_unquoted_string(newline_indent)
 
         if indent is not None and not self.single_line_tuples:
