@@ -120,6 +120,7 @@ cdef class Writer:
     cdef bint escape_newlines
     cdef bint sort_keys
     cdef bint single_line_empty_objects
+    cdef bint binary_spaces
 
     def __cinit__(
         self,
@@ -130,6 +131,7 @@ cdef class Writer:
         bint escape_newlines=True,
         bint sort_keys=True,
         bint single_line_empty_objects=True,
+        bint binary_spaces=True
     ):
         self.dest = new vector[Py_UCS4]()
         self.unicode_escape = unicode_escape
@@ -137,6 +139,7 @@ cdef class Writer:
         self.escape_newlines = escape_newlines
         self.sort_keys = sort_keys
         self.single_line_empty_objects = single_line_empty_objects
+        self.binary_spaces = binary_spaces
 
         if indent is not None:
             if isinstance(indent, basestring):
@@ -366,10 +369,12 @@ cdef class Writer:
             Py_ssize_t length = PyBytes_GET_SIZE(data)
             Py_ssize_t extra_length, i, j
 
+        binary_spaces = self.binary_spaces
+
         # the number includes the opening '<' and closing '>', and the
         # interleaving spaces between each group of 4 bytes; each byte
         # is encoded with two hexadecimal digit
-        extra_length = 2 + 2*length + ((length - 1)//4 if length > 4 else 0)
+        extra_length = 2 + 2*length + ((length - 1)//4 if binary_spaces and length > 4 else 0)
 
         j = dest.size()
         dest.resize(j + extra_length)
@@ -381,7 +386,7 @@ cdef class Writer:
             ptr[j] = HEX_MAP[(src[i] >> 4) & 0x0F]
             j += 1
             ptr[j] = HEX_MAP[src[i] & 0x0F]
-            if (i & 3) == 3 and i < length - 1:
+            if binary_spaces and (i & 3) == 3 and i < length - 1:
                 # if we've just finished a 32-bit int, print a space
                 j += 1
                 ptr[j] = c' '
@@ -617,7 +622,8 @@ cdef class Writer:
 
 def dumps(obj, bint unicode_escape=True, int float_precision=6, indent=None,
           bint single_line_tuples=False, bint escape_newlines=True,
-          bint sort_keys=True, bint single_line_empty_objects=True):
+          bint sort_keys=True, bint single_line_empty_objects=True,
+          bint binary_spaces=True):
     w = Writer(
         unicode_escape=unicode_escape,
         float_precision=float_precision,
@@ -626,6 +632,7 @@ def dumps(obj, bint unicode_escape=True, int float_precision=6, indent=None,
         escape_newlines=escape_newlines,
         sort_keys=sort_keys,
         single_line_empty_objects=single_line_empty_objects,
+        binary_spaces=binary_spaces,
     )
     w.write(obj)
     return w.getvalue()
@@ -633,7 +640,8 @@ def dumps(obj, bint unicode_escape=True, int float_precision=6, indent=None,
 
 def dump(obj, fp, bint unicode_escape=True, int float_precision=6, indent=None,
          bint single_line_tuples=False, bint escape_newlines=True,
-         bint sort_keys=True, bint single_line_empty_objects=True):
+         bint sort_keys=True, bint single_line_empty_objects=True,
+         bint binary_spaces=True):
     w = Writer(
         unicode_escape=unicode_escape,
         float_precision=float_precision,
@@ -642,6 +650,7 @@ def dump(obj, fp, bint unicode_escape=True, int float_precision=6, indent=None,
         escape_newlines=escape_newlines,
         sort_keys=sort_keys,
         single_line_empty_objects=single_line_empty_objects,
+        binary_spaces=binary_spaces,
     )
     w.write(obj)
     w.dump(fp)
