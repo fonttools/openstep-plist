@@ -324,3 +324,44 @@ def test_sort_keys():
     assert openstep_plist.dumps(plist) == sorted_result
     assert openstep_plist.dumps(plist, sort_keys=True) == sorted_result
     assert openstep_plist.dumps(plist, sort_keys=False) == unsorted_result
+
+
+def test_single_line_empty_objects():
+    plist = {"a": [], "b": {}, "c": [{}], "d": [[]], "e": {"f": {}, "g": []}}
+    single_line_result = """{
+a = ();
+b = {};
+c = (
+{}
+);
+d = (
+()
+);
+e = {
+f = {};
+g = ();
+};
+}"""
+    multi_line_result = """{
+a = (
+);
+b = {
+};
+c = (
+{
+}
+);
+d = (
+(
+)
+);
+e = {
+f = {
+};
+g = (
+);
+};
+}"""
+    assert openstep_plist.dumps(plist, indent=0) == single_line_result
+    assert openstep_plist.dumps(plist, indent=0, single_line_empty_objects=True) == single_line_result
+    assert openstep_plist.dumps(plist, indent=0, single_line_empty_objects=False) == multi_line_result

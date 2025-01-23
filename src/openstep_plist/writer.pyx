@@ -119,6 +119,7 @@ cdef class Writer:
     cdef bint single_line_tuples
     cdef bint escape_newlines
     cdef bint sort_keys
+    cdef bint single_line_empty_objects
 
     def __cinit__(
         self,
@@ -128,12 +129,14 @@ cdef class Writer:
         bint single_line_tuples=False,
         bint escape_newlines=True,
         bint sort_keys=True,
+        bint single_line_empty_objects=True,
     ):
         self.dest = new vector[Py_UCS4]()
         self.unicode_escape = unicode_escape
         self.float_precision = float_precision
         self.escape_newlines = escape_newlines
         self.sort_keys = sort_keys
+        self.single_line_empty_objects = single_line_empty_objects
 
         if indent is not None:
             if isinstance(indent, basestring):
@@ -402,15 +405,20 @@ cdef class Writer:
             vector[Py_UCS4] *dest = self.dest
             unicode indent, newline_indent = ""
 
+        indent = self.indent
+
         if length == 0:
-            dest.push_back(c'(')
-            dest.push_back(c')')
-            return 2
+            if self.single_line_empty_objects or indent is None:
+                dest.push_back(c'(')
+                dest.push_back(c')')
+                return 2
+            else:
+                newline_indent = '(\n' + self.current_indent_level * indent + ')'
+                return self.write_unquoted_string(newline_indent)
 
         dest.push_back(c'(')
         count = 1
 
-        indent = self.indent
         if indent is not None:
             self.current_indent_level += 1
             newline_indent = '\n' + self.current_indent_level * indent
@@ -447,15 +455,20 @@ cdef class Writer:
             vector[Py_UCS4] *dest = self.dest
             unicode indent, newline_indent = ""
 
+        indent = self.indent
+
         if length == 0:
-            dest.push_back(c'(')
-            dest.push_back(c')')
-            return 2
+            if self.single_line_empty_objects or indent is None:
+                dest.push_back(c'(')
+                dest.push_back(c')')
+                return 2
+            else:
+                newline_indent = '(\n' + self.current_indent_level * indent + ')'
+                return self.write_unquoted_string(newline_indent)
 
         dest.push_back(c'(')
         count = 1
 
-        indent = self.indent
         if indent is not None and not self.single_line_tuples:
             self.current_indent_level += 1
             newline_indent = '\n' + self.current_indent_level * indent
@@ -488,15 +501,20 @@ cdef class Writer:
             vector[Py_UCS4] *dest = self.dest
             Py_ssize_t last, count, i
 
+        indent = self.indent
+
         if not d:
-            dest.push_back(c'{')
-            dest.push_back(c'}')
-            return 2
+            if self.single_line_empty_objects or indent is None:
+                dest.push_back(c'{')
+                dest.push_back(c'}')
+                return 2
+            else:
+                newline_indent = '{\n' + self.current_indent_level * indent + '}'
+                return self.write_unquoted_string(newline_indent)
 
         dest.push_back(c'{')
         count = 1
 
-        indent = self.indent
         if indent is not None:
             self.current_indent_level += 1
             newline_indent = '\n' + self.current_indent_level * indent
@@ -546,15 +564,20 @@ cdef class Writer:
             vector[Py_UCS4] *dest = self.dest
             Py_ssize_t last, count, i
 
+        indent = self.indent
+
         if not d:
-            dest.push_back(c'{')
-            dest.push_back(c'}')
-            return 2
+            if self.single_line_empty_objects or indent is None:
+                dest.push_back(c'{')
+                dest.push_back(c'}')
+                return 2
+            else:
+                newline_indent = '{\n' + self.current_indent_level * indent + '}'
+                return self.write_unquoted_string(newline_indent)
 
         dest.push_back(c'{')
         count = 1
 
-        indent = self.indent
         if indent is not None:
             self.current_indent_level += 1
             newline_indent = '\n' + self.current_indent_level * indent
@@ -594,7 +617,7 @@ cdef class Writer:
 
 def dumps(obj, bint unicode_escape=True, int float_precision=6, indent=None,
           bint single_line_tuples=False, bint escape_newlines=True,
-          bint sort_keys=True):
+          bint sort_keys=True, bint single_line_empty_objects=True):
     w = Writer(
         unicode_escape=unicode_escape,
         float_precision=float_precision,
@@ -602,6 +625,7 @@ def dumps(obj, bint unicode_escape=True, int float_precision=6, indent=None,
         single_line_tuples=single_line_tuples,
         escape_newlines=escape_newlines,
         sort_keys=sort_keys,
+        single_line_empty_objects=single_line_empty_objects,
     )
     w.write(obj)
     return w.getvalue()
@@ -609,7 +633,7 @@ def dumps(obj, bint unicode_escape=True, int float_precision=6, indent=None,
 
 def dump(obj, fp, bint unicode_escape=True, int float_precision=6, indent=None,
          bint single_line_tuples=False, bint escape_newlines=True,
-         bint sort_keys=True):
+         bint sort_keys=True, bint single_line_empty_objects=True):
     w = Writer(
         unicode_escape=unicode_escape,
         float_precision=float_precision,
@@ -617,6 +641,7 @@ def dump(obj, fp, bint unicode_escape=True, int float_precision=6, indent=None,
         single_line_tuples=single_line_tuples,
         escape_newlines=escape_newlines,
         sort_keys=sort_keys,
+        single_line_empty_objects=single_line_empty_objects,
     )
     w.write(obj)
     w.dump(fp)
