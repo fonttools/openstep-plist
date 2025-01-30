@@ -118,6 +118,7 @@ cdef class Writer:
     cdef int current_indent_level
     cdef bint single_line_tuples
     cdef bint escape_newlines
+    cdef bint sort_keys
 
     def __cinit__(
         self,
@@ -126,11 +127,13 @@ cdef class Writer:
         indent=None,
         bint single_line_tuples=False,
         bint escape_newlines=True,
+        bint sort_keys=True,
     ):
         self.dest = new vector[Py_UCS4]()
         self.unicode_escape = unicode_escape
         self.float_precision = float_precision
         self.escape_newlines = escape_newlines
+        self.sort_keys = sort_keys
 
         if indent is not None:
             if isinstance(indent, basestring):
@@ -503,7 +506,10 @@ cdef class Writer:
             count += self.write_unquoted_string(newline_indent)
 
         last = len(d) - 1
-        for i, (key, value) in enumerate(sorted(d.items())):
+        items = d.items()
+        if self.sort_keys:
+            items = sorted(items)
+        for i, (key, value) in enumerate(items):
             if not isinstance(key, unicode):
                 key = unicode(key)
             count += self.write_string(key)
@@ -590,26 +596,30 @@ cdef class Writer:
 
 
 def dumps(obj, bint unicode_escape=True, int float_precision=6, indent=None,
-          bint single_line_tuples=False, bint escape_newlines=True):
+          bint single_line_tuples=False, bint escape_newlines=True,
+          bint sort_keys=True):
     w = Writer(
         unicode_escape=unicode_escape,
         float_precision=float_precision,
         indent=indent,
         single_line_tuples=single_line_tuples,
         escape_newlines=escape_newlines,
+        sort_keys=sort_keys,
     )
     w.write(obj)
     return w.getvalue()
 
 
 def dump(obj, fp, bint unicode_escape=True, int float_precision=6, indent=None,
-         bint single_line_tuples=False, bint escape_newlines=True):
+         bint single_line_tuples=False, bint escape_newlines=True,
+         bint sort_keys=True):
     w = Writer(
         unicode_escape=unicode_escape,
         float_precision=float_precision,
         indent=indent,
         single_line_tuples=single_line_tuples,
         escape_newlines=escape_newlines,
+        sort_keys=sort_keys,
     )
     w.write(obj)
     w.dump(fp)
