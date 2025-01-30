@@ -116,25 +116,34 @@ class TestWriter(object):
         assert w.getvalue() == "1"
 
     @pytest.mark.parametrize(
-        "data, expected",
+        "data, expected, expected_no_spaces",
         [
-            (b"\x00", "<00>"),
-            (b"\x00\x01", "<0001>"),
-            (b"\x00\x01\x02", "<000102>"),
-            (b"\x00\x01\x02\x03", "<00010203>"),
-            (b"\x00\x01\x02\x03\x04", "<00010203 04>"),
-            (b"\x00\x01\x02\x03\x04\x05", "<00010203 0405>"),
-            (b"\x00\x01\x02\x03\x04\x05\x06", "<00010203 040506>"),
-            (b"\x00\x01\x02\x03\x04\x05\x06\x07", "<00010203 04050607>"),
-            (b"\x00\x01\x02\x03\x04\x05\x06\x07\x08", "<00010203 04050607 08>"),
-            (b"\x09\x0A\x0B\x0C\x0D\x0E\x0F\x10\x11", "<090A0B0C 0D0E0F10 11>"),
+            (b"\x00", "<00>", "<00>"),
+            (b"\x00\x01", "<0001>", "<0001>"),
+            (b"\x00\x01\x02", "<000102>", "<000102>"),
+            (b"\x00\x01\x02\x03", "<00010203>", "<00010203>"),
+            (b"\x00\x01\x02\x03\x04", "<00010203 04>", "<0001020304>"),
+            (b"\x00\x01\x02\x03\x04\x05", "<00010203 0405>", "<000102030405>"),
+            (b"\x00\x01\x02\x03\x04\x05\x06", "<00010203 040506>", "<00010203040506>"),
+            (b"\x00\x01\x02\x03\x04\x05\x06\x07", "<00010203 04050607>", "<0001020304050607>"),
+            (b"\x00\x01\x02\x03\x04\x05\x06\x07\x08", "<00010203 04050607 08>", "<000102030405060708>"),
+            (b"\x09\x0A\x0B\x0C\x0D\x0E\x0F\x10\x11", "<090A0B0C 0D0E0F10 11>", "<090A0B0C0D0E0F1011>"),
         ],
         ids=lambda p: p.decode() if isinstance(p, bytes) else p,
     )
-    def test_data(self, data, expected):
+    def test_data(self, data, expected, expected_no_spaces):
         w = Writer()
         assert w.write(data) == len(expected)
         assert w.getvalue() == expected
+
+        w = Writer(binary_spaces=True)
+        assert w.write(data) == len(expected)
+        assert w.getvalue() == expected
+
+        w = Writer(binary_spaces=False)
+        # assert w.write(data) == len(expected_no_spaces)
+        w.write(data)
+        assert w.getvalue() == expected_no_spaces
 
     def test_bool(self):
         w = Writer()
@@ -311,7 +320,7 @@ c = Hello;
     ) == (
         """{
 a = 1;
-b = (2, 3);
+b = (2,3);
 c = Hello;
 }"""
     )
@@ -324,3 +333,44 @@ def test_sort_keys():
     assert openstep_plist.dumps(plist) == sorted_result
     assert openstep_plist.dumps(plist, sort_keys=True) == sorted_result
     assert openstep_plist.dumps(plist, sort_keys=False) == unsorted_result
+
+
+def test_single_line_empty_objects():
+    plist = {"a": [], "b": {}, "c": [{}], "d": [[]], "e": {"f": {}, "g": []}}
+    single_line_result = """{
+a = ();
+b = {};
+c = (
+{}
+);
+d = (
+()
+);
+e = {
+f = {};
+g = ();
+};
+}"""
+    multi_line_result = """{
+a = (
+);
+b = {
+};
+c = (
+{
+}
+);
+d = (
+(
+)
+);
+e = {
+f = {
+};
+g = (
+);
+};
+}"""
+    assert openstep_plist.dumps(plist, indent=0) == single_line_result
+    assert openstep_plist.dumps(plist, indent=0, single_line_empty_objects=True) == single_line_result
+    assert openstep_plist.dumps(plist, indent=0, single_line_empty_objects=False) == multi_line_result
