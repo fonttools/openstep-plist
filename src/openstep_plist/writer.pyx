@@ -197,7 +197,7 @@ cdef class Writer:
             return 1
         elif isinstance(obj, float):
             return self.write_short_float_repr(obj)
-        elif isinstance(obj, (int, long)):
+        elif isinstance(obj, int):
             return self.write_unquoted_string(unicode(obj))
         elif isinstance(obj, list):
             return self.write_array_from_list(obj)
