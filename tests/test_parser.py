@@ -138,7 +138,10 @@ def test_parse_unquoted_plist_string_EOF():
         ("a", "a"),
         ('"a"', "a"),
         ("'a'", "a"),
-        ('"a\\012b"', ("a\nb")),
+        ('"a\\012b"', "a\nb"),
+        (r'"subCategory == \"Currency\""', 'subCategory == "Currency"'),
+        (r"distributed on an \"AS IS\" BASIS", 'distributed on an "AS IS" BASIS'),
+        (r'"a\"\\012\"b"', 'a"\n"b'),
         # surrogate pair gets decoded as a single scalar value
         ('"\\UD83D\\UDCA9"', "\U0001F4A9"),  # '💩'
         # surrogate that don't go in pairs are simply passed through
