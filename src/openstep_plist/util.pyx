@@ -1,16 +1,12 @@
 #cython: language_level=3
 #distutils: define_macros=CYTHON_TRACE_NOGIL=1
 
-from cpython.version cimport PY_MAJOR_VERSION
 from libc.stdint cimport uint16_t, uint32_t
-import sys
 
 
 cdef inline unicode tounicode(s, encoding="ascii", errors="strict"):
     if type(s) is unicode:
         return <unicode>s
-    elif PY_MAJOR_VERSION < 3 and isinstance(s, bytes):
-        return (<bytes>s).decode(encoding, errors=errors)
     elif isinstance(s, unicode):
         return unicode(s)
     else:
@@ -19,9 +15,9 @@ cdef inline unicode tounicode(s, encoding="ascii", errors="strict"):
 
 cdef inline object tostr(s, encoding="ascii", errors="strict"):
     if isinstance(s, bytes):
-        return s if PY_MAJOR_VERSION < 3 else s.decode(encoding, errors=errors)
+        return s.decode(encoding, errors=errors)
     elif isinstance(s, unicode):
-        return s.encode(encoding, errors=errors) if PY_MAJOR_VERSION < 3 else s
+        return s
     else:
         raise TypeError(f"Could not convert to str: {s!r}")
 
