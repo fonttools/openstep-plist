@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheel ${{ matrix.os }}
+    name: Build wheel ${{ matrix.os }} (${{ matrix.arch }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -24,6 +24,8 @@ jobs:
             arch: universal2
           - os: ubuntu-24.04-arm
             arch: aarch64
+          - os: windows-latest
+            arch: ARM64
     env:
       CIBW_ARCHS: ${{ matrix.arch }}
       # Skip
