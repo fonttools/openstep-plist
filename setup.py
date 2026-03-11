@@ -4,14 +4,9 @@ from setuptools.command.sdist import sdist as _sdist
 from distutils import log
 import os
 import sys
-import pkg_resources
-from io import open
+from importlib.metadata import version as get_version, PackageNotFoundError
+from packaging.version import Version
 import re
-
-
-argv = sys.argv[1:]
-needs_wheel = {"bdist_wheel"}.intersection(argv)
-wheel = ["wheel"] if needs_wheel else []
 
 # check if minimum required Cython is available
 cython_version_re = re.compile(r'\s*"cython\s*>=\s*([0-9][0-9\w\.]*)\s*"')
@@ -23,13 +18,11 @@ with open("pyproject.toml", "r", encoding="utf-8") as fp:
             break
     else:
         sys.exit("error: could not parse cython version from pyproject.toml")
+required_cython = "cython >= %s" % cython_min_version
 try:
-    required_cython = "cython >= %s" % cython_min_version
-    pkg_resources.require(required_cython)
-except pkg_resources.ResolutionError:
+    with_cython = Version(get_version("cython")) >= Version(cython_min_version)
+except PackageNotFoundError:
     with_cython = False
-else:
-    with_cython = True
 
 
 class cython_build_ext(_build_ext):
@@ -91,19 +84,11 @@ class cython_sdist(_sdist):
         _sdist.run(self)
 
 
-# need to include this for Visual Studio 2008 doesn't have stdint.h
-include_dirs = (
-    [os.path.join(os.path.dirname(__file__), "vendor", "msinttypes")]
-    if os.name == "nt" and sys.version_info < (3,)
-    else []
-)
-
 cython_modules = ["parser", "util", "writer", "_test"]
 extensions = [
     Extension(
         "openstep_plist." + mod,
         sources=["src/openstep_plist/%s.pyx" % mod],
-        include_dirs=include_dirs,
         language="c++",
         extra_compile_args=["-std=c++11"] if sys.platform != "win32" else [],
     )
@@ -130,7 +115,6 @@ setup_args = dict(
     include_package_data=True,
     exclude_package_data={"": ["*.cpp"]},
     ext_modules=extensions,
-    setup_requires=["setuptools_scm"] + wheel,
     python_requires=">=3.8",
     cmdclass={"build_ext": cython_build_ext, "sdist": cython_sdist},
     zip_safe=False,
